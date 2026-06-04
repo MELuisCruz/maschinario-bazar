@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block body_class %}chrome{% endblock %}
+{% block body %}
+<form class="card" method="post" action="/login" style="display:flex;flex-direction:column;gap:.4rem;">
+  <div class="brand" style="text-align:center;margin-bottom:.6rem;">
+    MASCHINARIO <small>· BAZAR</small>
+  </div>
+  {% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+  <label for="usuario">Usuario</label>
+  <input id="usuario" name="usuario" autocomplete="username" autofocus required />
+  <label for="pin">PIN</label>
+  <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="off" required />
+  <button class="btn btn-primary" type="submit" style="margin-top:.8rem;">Entrar</button>
+</form>
+{% endblock %}
