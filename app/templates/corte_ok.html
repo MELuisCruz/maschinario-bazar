@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block body_class %}chrome{% endblock %}
+{% block body %}
+<div class="card" style="min-width:380px;">
+  <div class="brand" style="text-align:center;">MASCHINARIO <small>· BAZAR</small></div>
+  <h2 style="text-align:center;">Turno cerrado</h2>
+  <div class="mono">
+    <div style="display:flex;justify-content:space-between;"><span>Esperado</span>
+      <span>${{ '%.2f'|format(res.esperado_efectivo) }}</span></div>
+    <div style="display:flex;justify-content:space-between;"><span>Contado</span>
+      <span>${{ '%.2f'|format(turno.efectivo_contado) }}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:1.2rem;">
+      <span>Diferencia</span>
+      <span class="{{ 'ok' if dif == 0 else 'err' }}">
+        {% if dif == 0 %}Cuadrada{% elif dif > 0 %}Sobrante ${{ '%.2f'|format(dif) }}{% else %}Faltante ${{ '%.2f'|format(-dif) }}{% endif %}
+      </span></div>
+  </div>
+  <form method="post" action="/turno" style="margin-top:1rem;">
+    <a class="btn btn-primary" href="/turno" style="width:100%;text-align:center;">Abrir nuevo turno</a>
+  </form>
+  <form method="post" action="/logout" style="margin-top:.5rem;">
+    <button class="btn" style="width:100%;">Salir</button>
+  </form>
+</div>
+{% endblock %}

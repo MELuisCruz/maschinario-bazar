@@ -1,0 +1,39 @@
+{% extends "shell.html" %}
+{% block title %}Corte de caja — {{ business_name }}{% endblock %}
+{% block content %}
+<h2>Corte de caja · turno #{{ turno.id }}</h2>
+{% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+{% if abiertas %}<div class="warn">Ventas abiertas pendientes: {{ abiertas }}.</div>{% endif %}
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:1rem;">
+  <div class="panel mono">
+    <div style="display:flex;justify-content:space-between;"><span>Fondo inicial</span>
+      <span>${{ '%.2f'|format(res.fondo_inicial) }}</span></div>
+    <hr/>
+    <strong>Ventas por medio de pago</strong>
+    {% for medio, monto in res.por_medio.items() %}
+    <div style="display:flex;justify-content:space-between;"><span>{{ medio }}</span>
+      <span>${{ '%.2f'|format(monto) }}</span></div>
+    {% else %}<div class="muted">Sin ventas.</div>{% endfor %}
+    <hr/>
+    <div style="display:flex;justify-content:space-between;"><span>Devoluciones efectivo</span>
+      <span>−${{ '%.2f'|format(res.devoluciones_efectivo) }}</span></div>
+    <div style="display:flex;justify-content:space-between;"><span>Tickets</span>
+      <span>{{ res.num_tickets }}</span></div>
+  </div>
+
+  <form method="post" action="/corte/cerrar" class="panel">
+    <div class="total-card">
+      <div class="muted" style="color:#9fbfc2;">EFECTIVO ESPERADO</div>
+      <div class="big">${{ '%.2f'|format(res.esperado_efectivo) }}</div>
+    </div>
+    <label for="efectivo_contado">Efectivo contado (arqueo)</label>
+    <input id="efectivo_contado" name="efectivo_contado" class="mono"
+           inputmode="decimal" value="{{ '%.2f'|format(res.esperado_efectivo) }}" />
+    <label for="notas">Notas</label>
+    <input id="notas" name="notas" />
+    <button class="btn btn-primary" type="submit" style="width:100%;margin-top:.8rem;"
+            {% if abiertas %}disabled{% endif %}>Cerrar turno y caja</button>
+  </form>
+</div>
+{% endblock %}
