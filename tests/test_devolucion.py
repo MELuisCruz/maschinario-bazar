@@ -150,3 +150,19 @@ def test_http_devolucion_flow(op_client, make_producto, db, turno):
         "/devolucion/confirmar", data={"folio": folio, f"cant_{linea_id}": "1"}
     )
     assert "Devolución registrada" in r2.text
+
+
+def test_http_devolucion_ignora_campo_malformado(op_client, make_producto, db, turno):
+    # Un 'cant_abc' (no entero) no debe romper la petición (antes: 500).
+    make_producto(codigo="BADK", precio="50.00", existencia="5")
+    v = ventas.get_or_create_venta(db, turno.id, turno.cajero_id)
+    ventas.agregar_por_codigo(db, v, "BADK")
+    db.commit()
+    cobro.cobrar_efectivo(db, v, v.total)
+    db.commit()
+    linea_id = v.lineas[0].id
+    r = op_client.post(
+        "/devolucion/confirmar",
+        data={"folio": v.folio, "cant_abc": "1", f"cant_{linea_id}": "1"},
+    )
+    assert r.status_code == 200 and "Devolución registrada" in r.text

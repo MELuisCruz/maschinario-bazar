@@ -10,6 +10,7 @@ from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -131,6 +132,14 @@ def tarjeta_iniciar(
         return _panel(
             request, venta, state="error", error=f"Error de Mercado Pago: {exc}"
         )
+    except cobro_svc.VentaNoCobrable:
+        session.rollback()
+        return _panel(
+            request,
+            venta,
+            state="error",
+            error="La venta no tiene saldo a cobrar con tarjeta.",
+        )
     session.commit()
     return _panel(request, venta, state="waiting", pago=pago)
 
@@ -144,12 +153,11 @@ def tarjeta_estado(
 ):
     _, turno = ctx
     venta = _venta_activa(session, turno)
-    pago = (
-        session.query(Pago)
-        .filter(Pago.venta_id == venta.id, Pago.medio == "tarjeta_point")
+    pago = session.scalars(
+        select(Pago)
+        .where(Pago.venta_id == venta.id, Pago.medio == "tarjeta_point")
         .order_by(Pago.id.desc())
-        .first()
-    )
+    ).first()
     if pago is None:
         return _panel(request, venta, state="idle")
     try:
@@ -171,16 +179,15 @@ def tarjeta_cancelar(
 ):
     _, turno = ctx
     venta = _venta_activa(session, turno)
-    pago = (
-        session.query(Pago)
-        .filter(
+    pago = session.scalars(
+        select(Pago)
+        .where(
             Pago.venta_id == venta.id,
             Pago.medio == "tarjeta_point",
             Pago.estado == "pendiente",
         )
         .order_by(Pago.id.desc())
-        .first()
-    )
+    ).first()
     if pago is not None:
         try:
             cobro_svc.cancelar_tarjeta(session, pago, client)

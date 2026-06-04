@@ -43,10 +43,17 @@ def _finalizar_si_cubierta(session: Session, venta: Venta) -> None:
         session.flush()
 
 
-def cobrar_efectivo(session: Session, venta: Venta, recibido: Decimal) -> Pago:
-    """Registra un pago en efectivo y cierra la venta si queda cubierta (AT-3.1)."""
+def cobrar_efectivo(session: Session, venta: Venta, recibido: Decimal) -> Pago | None:
+    """Registra un pago en efectivo y cierra la venta si queda cubierta (AT-3.1).
+
+    Si el total es 0 (venta 100% descontada) NO se registra pago —violaría el
+    CHECK `monto > 0`— y la venta se cierra directamente; devuelve None.
+    """
     if venta.estado != "abierta" or not venta.lineas:
         raise VentaNoCobrable()
+    if venta.total <= 0:
+        _finalizar_si_cubierta(session, venta)  # 0 >= 0 → cierra sin pago
+        return None
     recibido = q2(recibido)
     if recibido < venta.total:  # AT-3.2: nunca pagada por debajo del total
         raise PagoInsuficiente()
@@ -95,6 +102,8 @@ def iniciar_tarjeta(session: Session, venta: Venta, client, terminal_id: str) ->
     `idempotency_key_already_used` (genera key nueva y reintenta).
     """
     if venta.estado != "abierta" or not venta.lineas:
+        raise VentaNoCobrable()
+    if venta.total <= 0:  # una venta sin saldo no se cobra con tarjeta
         raise VentaNoCobrable()
 
     key = mp_point.new_idempotency_key()

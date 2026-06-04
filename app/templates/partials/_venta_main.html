@@ -68,8 +68,9 @@
       <div class="big">${{ '%.2f'|format(venta.total) }}</div>
     </div>
 
-    <a class="btn btn-primary" href="/cobro" style="text-align:center;"
-       {% if not venta.lineas %}aria-disabled="true" style="pointer-events:none;opacity:.5;"{% endif %}>
+    <a class="btn btn-primary" href="/cobro"
+       style="text-align:center;{% if not venta.lineas %}pointer-events:none;opacity:.5;{% endif %}"
+       {% if not venta.lineas %}aria-disabled="true"{% endif %}>
       COBRAR (F12)</a>
     <button class="btn btn-danger" hx-post="/venta/cancelar" hx-confirm="¿Cancelar la venta?">
       Cancelar venta</button>

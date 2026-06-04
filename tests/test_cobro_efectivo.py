@@ -81,6 +81,21 @@ def test_at_6_4_sin_control_no_descuenta(db, turno, make_producto):
     assert p.existencia == D("5")  # no controla stock → intacto
 
 
+def test_total_cero_cierra_sin_pago(db, turno, make_producto):
+    # Venta 100% descontada (total 0): no se crea Pago (violaría CHECK monto>0);
+    # la venta se cierra igualmente. Antes esto reventaba en la DB.
+    v = ventas.get_or_create_venta(db, turno.id, turno.cajero_id)
+    make_producto(codigo="ZERO", precio="50.00", existencia="5")
+    ventas.agregar_por_codigo(db, v, "ZERO")
+    ventas.aplicar_descuento_global(db, v, D("50.00"))
+    db.commit()
+    assert v.total == D("0.00")
+    pago = cobro.cobrar_efectivo(db, v, D("0"))
+    db.commit()
+    assert pago is None
+    assert v.estado == "pagada"
+
+
 def test_http_cobro_efectivo(op_client, make_producto):
     make_producto(codigo="H", precio="20.00", existencia="3")
     op_client.post("/venta/scan", data={"codigo": "H"})

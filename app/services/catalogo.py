@@ -12,7 +12,7 @@ import io
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models import Producto
@@ -43,8 +43,6 @@ def _existe(
         cond.append(Producto.sku == sku)
     if not cond:
         return False
-    from sqlalchemy import or_
-
     q = select(Producto.id).where(or_(*cond))
     if excluir_id is not None:
         q = q.where(Producto.id != excluir_id)

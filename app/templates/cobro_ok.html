@@ -5,10 +5,14 @@
   <div class="ok" style="font-size:1.1rem;">Venta <strong>{{ venta.folio }}</strong> cobrada.</div>
   <div class="panel mono">
     <div style="display:flex;justify-content:space-between;"><span>Total</span><span>${{ '%.2f'|format(venta.total) }}</span></div>
+    {% if pago %}
     <div style="display:flex;justify-content:space-between;"><span>Medio</span><span>{{ pago.medio }}</span></div>
     {% if pago.medio == 'efectivo' %}
     <div style="display:flex;justify-content:space-between;"><span>Recibido</span><span>${{ '%.2f'|format(pago.recibido) }}</span></div>
     <div style="display:flex;justify-content:space-between;font-size:1.3rem;"><span>Cambio</span><span>${{ '%.2f'|format(pago.cambio) }}</span></div>
+    {% endif %}
+    {% else %}
+    <div style="display:flex;justify-content:space-between;"><span>Medio</span><span>sin saldo (100% descuento)</span></div>
     {% endif %}
   </div>
   <div style="display:flex;gap:.5rem;">

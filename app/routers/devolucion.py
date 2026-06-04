@@ -93,11 +93,17 @@ async def confirmar(
             {"venta": None, "aviso": "Venta no encontrada."},
         )
 
-    items = [
-        devoluciones.ItemDevolucion(venta_linea_id=int(k[5:]), cantidad=_dec(v))
-        for k, v in form.items()
-        if k.startswith("cant_") and _dec(v) > 0
-    ]
+    items = []
+    for k, v in form.items():
+        if not k.startswith("cant_") or _dec(v) <= 0:
+            continue
+        try:
+            linea_id = int(k[5:])
+        except ValueError:
+            continue  # campo malformado (p. ej. 'cant_abc'): ignorar, no romper
+        items.append(
+            devoluciones.ItemDevolucion(venta_linea_id=linea_id, cantidad=_dec(v))
+        )
     try:
         dev = devoluciones.crear_devolucion(
             session, venta, items, cajero_id=cajero.id, turno_id=turno.id, client=client
