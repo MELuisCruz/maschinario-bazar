@@ -4,8 +4,9 @@ Punto de venta web que corre **localmente** en una caja. Stack: **FastAPI + Uvic
 Jinja2 + HTMX (no SPA) · PostgreSQL (docker-compose) · SQLAlchemy + Alembic ·
 python-escpos · Mercado Pago API de Orders**. Proyecto `PRY-F-0001.1.8`.
 
-El diseño (residuo aprobado) vive en `UserReq/…/maschinario-bazar/` y las reglas de
-construcción en `CLAUDE.md`. Esta app implementa el alcance v1.
+El diseño aprobado vive en `docs/` (PRD, arquitectura, modelo de datos, integración
+MP, ticket térmico, periféricos, UI y criterios de aceptación) y las reglas de
+construcción en `CLAUDE.md` (raíz). Esta app implementa el alcance v1.
 
 ## Arranque (detalle en CLAUDE.md §4)
 
@@ -58,19 +59,36 @@ cat backup_YYYY-MM-DD.sql | docker compose exec -T db psql -U pos maschinario
 - **administrador:** gestiona catálogo, importa CSV, administra cajeros y roles.
 - **cajero:** opera venta, cobro, devolución y corte; consulta catálogo y reportes.
 
-## Estructura
+## Estructura del repo
 
 ```
-app/
-├── main.py · config.py · db.py · deps.py · seed.py
-├── models/      # ORM (DATA_MODEL.md)
-├── routers/     # auth, venta, cobro, devolucion, catalogo, corte, reportes, reimpresion, usuarios
-├── services/    # money, turnos, ventas, cobro, mp_point, stock, devoluciones, corte, catalogo, reportes, fiscal_export, printing, cajeros, security
-├── templates/   # Jinja2 + parciales HTMX
-└── static/      # CSS de marca, JS de foco/atajos, htmx vendorizado
-alembic/         # migraciones
-tests/           # pytest (lógica + HTTP; MP mockeado)
+maschinario-bazar/
+├── CLAUDE.md            # reglas de construcción (Claude Code lo lee solo)
+├── README.md           # esta guía operativa
+├── docker-compose.yml  # servicio db (postgres) + volumen
+├── .env.example        # plantilla de variables; .gitignore evita versionar el .env real
+├── requirements.txt · alembic.ini
+├── alembic/            # migraciones
+├── app/
+│   ├── main.py · config.py · db.py · deps.py · seed.py
+│   ├── models/         # ORM (docs/DATA_MODEL.md)
+│   ├── routers/        # auth, venta, cobro, devolucion, catalogo, corte, reportes, reimpresion, usuarios
+│   ├── services/       # money, turnos, ventas, cobro, mp_point, stock, devoluciones, corte, catalogo, reportes, fiscal_export, printing, cajeros, security
+│   ├── templates/      # Jinja2 + parciales HTMX
+│   └── static/         # CSS de marca, JS de foco/atajos, htmx vendorizado
+├── docs/               # diseño aprobado + mockup/ (referencia visual) + handoff/ (guías)
+│   ├── PRD.md · ARCHITECTURE.md · DATA_MODEL.md · INTEGRATION_MP_POINT.md
+│   ├── THERMAL_TICKET_SPEC.md · PERIPHERALS.md · UI_SPEC.md · ACCEPTANCE_TESTS.md
+│   ├── mockup/         # prototipo React (look & feel; no es la UI de producción)
+│   └── handoff/        # checklist y guía de arranque del operador
+└── tests/              # pytest (lógica + HTTP; MP mockeado)
 ```
+
+### Documentos de diseño (`docs/`, orden de lectura)
+`CLAUDE.md` → `docs/PRD.md` → `docs/ARCHITECTURE.md` → `docs/DATA_MODEL.md` →
+`docs/INTEGRATION_MP_POINT.md` → `docs/THERMAL_TICKET_SPEC.md` → `docs/PERIPHERALS.md` →
+`docs/UI_SPEC.md` → `docs/ACCEPTANCE_TESTS.md`. El prototipo visual está en
+`docs/mockup/` (abre `index.html`, PIN demo `2468`).
 
 ---
 *POS Maschinario · Bazar · v1 · ticket = nota de compra (no CFDI); la app no timbra.*
