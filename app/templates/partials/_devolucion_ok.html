@@ -1,0 +1,14 @@
+{# Resultado de devolución. #}
+<div id="dev-lineas">
+  <div class="ok" style="font-size:1.05rem;">
+    Devolución registrada para <strong>{{ venta.folio }}</strong>.
+  </div>
+  <div class="panel mono" style="margin-top:.6rem;">
+    <div style="display:flex;justify-content:space-between;"><span>Monto devuelto</span>
+      <span>${{ '%.2f'|format(dev.monto) }}</span></div>
+    <div style="display:flex;justify-content:space-between;"><span>Estado venta</span>
+      <span>{{ venta.estado }}</span></div>
+  </div>
+  <p class="muted">Stock reintegrado. El reembolso en efectivo se entrega de caja;
+     el de tarjeta se procesa vía Point.</p>
+</div>

@@ -1,0 +1,33 @@
+{# Cabecera de venta + líneas con stepper topado a lo vendido (UI_SPEC §5.4). #}
+<div id="dev-lineas">
+  {% if aviso %}<div class="warn" role="alert">{{ aviso }}</div>{% endif %}
+  {% if venta %}
+  <form hx-post="/devolucion/confirmar" hx-target="#dev-lineas" hx-swap="outerHTML">
+    <input type="hidden" name="folio" value="{{ venta.folio }}" />
+    <div class="panel" style="margin-bottom:.6rem;">
+      <strong>{{ venta.folio }}</strong> · {{ venta.creado_en.strftime("%Y-%m-%d %H:%M") }}
+      · estado: {{ venta.estado }}
+    </div>
+    <table>
+      <thead><tr><th>Descripción</th><th class="num">Vendido</th>
+        <th class="num">Restante</th><th class="num">Devolver</th></tr></thead>
+      <tbody>
+      {% for row in lineas %}
+        <tr>
+          <td>{{ row.linea.descripcion }}</td>
+          <td class="num mono">{{ '%g'|format(row.linea.cantidad) }}</td>
+          <td class="num mono">{{ '%g'|format(row.restante) }}</td>
+          <td class="num">
+            <input class="mono" name="cant_{{ row.linea.id }}" value="0"
+                   inputmode="decimal" min="0" max="{{ row.restante }}"
+                   style="width:5rem;text-align:right;" />
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <button class="btn btn-danger" type="submit" style="margin-top:.8rem;">
+      Confirmar devolución</button>
+  </form>
+  {% endif %}
+</div>

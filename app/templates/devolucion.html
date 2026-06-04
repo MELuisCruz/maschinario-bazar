@@ -1,0 +1,13 @@
+{% extends "shell.html" %}
+{% block title %}Devolución — {{ business_name }}{% endblock %}
+{% block content %}
+<h2>Devolución</h2>
+<form hx-post="/devolucion/buscar" hx-target="#dev-lineas" hx-swap="outerHTML"
+      hx-on::after-request="document.getElementById('scan-input').focus();"
+      style="max-width:480px;margin-bottom:1rem;">
+  <label for="scan-input">Folio de la venta (escanea el ticket)</label>
+  <input id="scan-input" name="folio" autocomplete="off" placeholder="V-000123" />
+</form>
+
+<div id="dev-lineas"></div>
+{% endblock %}
