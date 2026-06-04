@@ -1,0 +1,24 @@
+{# Shell operativo: topbar con marca, navegación de 6 destinos y sesión (UI_SPEC §4).
+   Las pantallas de operación extienden esta plantilla. #}
+{% extends "base.html" %}
+{% block body %}
+<header class="topbar">
+  <span class="brand">MASCHINARIO</span>
+  <nav>
+    {% set active = active_nav | default("") %}
+    <a href="/venta"      class="{{ 'active' if active=='venta' }}">Venta</a>
+    <a href="/devolucion" class="{{ 'active' if active=='devolucion' }}">Devolución</a>
+    <a href="/reimpresion" class="{{ 'active' if active=='reimpresion' }}">Reimpresión</a>
+    <a href="/catalogo"   class="{{ 'active' if active=='catalogo' }}">Catálogo</a>
+    <a href="/reportes"   class="{{ 'active' if active=='reportes' }}">Reportes</a>
+    <a href="/corte"      class="{{ 'active' if active=='corte' }}">Corte de caja</a>
+    {% if es_admin(cajero) %}<a href="/usuarios" class="{{ 'active' if active=='usuarios' }}">Usuarios</a>{% endif %}
+  </nav>
+  <div class="session">
+    <span>{{ business_name }}</span>
+    {% if cajero %}<span>· {{ cajero.nombre }}</span>{% endif %}
+    <form method="post" action="/logout" style="margin:0;"><button class="btn" style="padding:.2rem .5rem;">Salir</button></form>
+  </div>
+</header>
+<main>{% block content %}{% endblock %}</main>
+{% endblock %}

@@ -1,0 +1,87 @@
+/* Maschinario · Bazar — POS · tokens y layout (UI_SPEC §1.1).
+   Color de marca (teal/rojo) SEPARADO del semántico (éxito/error/aviso). */
+:root {
+  /* Marca (chrome) */
+  --petroleo: #19424C; --tinta: #09191E;
+  --petroleo-2: #1F525E; --tinta-line: #12313A;
+  --rojo: #B60C0C; --menta: #A9DFC2; --teal: #209B9B; --teal-deep: #1B8484;
+  /* Semántico (independiente de marca) */
+  --exito: #1E9E5A; --exito-soft: #E6F4EC;
+  --error: #C62828; --error-soft: #FBEAEA;
+  --aviso: #C77700; --aviso-soft: #FBF2E3;
+  /* Superficies claras / texto / bordes */
+  --bg: #EBEEEE; --surface: #FFFFFF; --surface-2: #F4F6F6;
+  --ink: #0C1E23; --ink-2: #3C4E53; --muted: #6B7B7F; --faint: #9AA8AB;
+  --line: #D7DDDD; --line-strong: #C2C9C9;
+  --radius: 4px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "IBM Plex Sans", system-ui, sans-serif;
+  color: var(--ink); background: var(--bg); }
+.mono, .num { font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums; }
+h1, h2, .brand { font-family: "Orbitron", sans-serif; letter-spacing: .04em; }
+a { color: var(--teal-deep); }
+
+/* --- Chrome (login, turno, corte) --- */
+.chrome { min-height: 100vh; background: var(--tinta); color: #DDE8EA;
+  display: flex; align-items: center; justify-content: center; }
+.chrome .brand { color: #fff; font-size: 1.6rem; }
+.chrome .brand small { color: var(--teal); font-size: .9rem; }
+.card { background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1.5rem; }
+.chrome .card { background: #0E2329; color: #DDE8EA; border-color: var(--tinta-line);
+  min-width: 320px; }
+
+/* --- Shell operativo --- */
+.topbar { display: flex; align-items: center; gap: 1rem; background: var(--tinta);
+  color: #DDE8EA; padding: .55rem 1rem; border-bottom: 2px solid var(--teal-deep); }
+.topbar .brand { color: #fff; font-size: 1.05rem; }
+.topbar nav { display: flex; gap: .25rem; flex: 1; }
+.topbar nav a { color: #BFD0D3; text-decoration: none; padding: .35rem .7rem;
+  border-radius: var(--radius); font-size: .9rem; }
+.topbar nav a.active { background: var(--petroleo); color: #fff;
+  box-shadow: inset 0 -2px 0 var(--teal); }
+.topbar .session { font-size: .8rem; color: var(--faint); display: flex;
+  gap: .8rem; align-items: center; }
+main { padding: 1rem; }
+
+/* --- Controles --- */
+label { display: block; font-size: .8rem; color: var(--ink-2); margin: .6rem 0 .2rem; }
+input, select { width: 100%; padding: .5rem .6rem; border: 1px solid var(--line-strong);
+  border-radius: var(--radius); font: inherit; background: var(--surface); color: var(--ink); }
+.chrome input { background: #0A1A1F; color: #fff; border-color: var(--tinta-line); }
+#scan-input { font-family: "IBM Plex Mono", monospace; font-size: 1.1rem; }
+.btn { display: inline-block; padding: .55rem 1rem; border: 1px solid transparent;
+  border-radius: var(--radius); font: inherit; cursor: pointer; background: var(--surface-2);
+  color: var(--ink); }
+.btn-primary { background: var(--teal-deep); color: #fff; }
+.btn-primary:disabled { background: var(--faint); cursor: not-allowed; }
+.btn-danger { background: var(--error-soft); color: var(--error); border-color: var(--error); }
+
+/* --- Venta: dos columnas --- */
+.venta-grid { display: grid; grid-template-columns: 1fr 320px; gap: 1rem; }
+table { width: 100%; border-collapse: collapse; background: var(--surface); }
+th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--line); }
+td.num, th.num { text-align: right; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1rem; }
+.total-card { background: var(--tinta); color: #fff; border: 1px solid var(--teal);
+  border-radius: var(--radius); padding: 1rem; text-align: right; }
+.total-card .big { font-size: 2.6rem; font-family: "IBM Plex Mono", monospace; }
+
+/* --- Estados / feedback (semántico) --- */
+.warn { color: var(--aviso); background: var(--aviso-soft); padding: .4rem .6rem;
+  border-radius: var(--radius); }
+.err { color: var(--error); background: var(--error-soft); padding: .4rem .6rem;
+  border-radius: var(--radius); }
+.ok { color: var(--exito); background: var(--exito-soft); padding: .4rem .6rem;
+  border-radius: var(--radius); }
+.tag { font-size: .72rem; padding: .1rem .4rem; border-radius: 3px; }
+.tag-ok { background: var(--exito-soft); color: var(--exito); }
+.tag-low { background: var(--aviso-soft); color: var(--aviso); }
+.tag-out { background: var(--error-soft); color: var(--error); }
+.muted { color: var(--muted); }
+.empty { color: var(--faint); text-align: center; padding: 2rem; }
+.ticket { font-family: "IBM Plex Mono", monospace; white-space: pre; background: var(--surface);
+  border: 1px solid var(--line); padding: 1rem; max-width: 26rem; }
