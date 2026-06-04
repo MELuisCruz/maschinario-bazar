@@ -1,0 +1,37 @@
+{# Panel de cobro con tarjeta (Point Smart 2). Estados en vivo (UI_SPEC §5.3).
+   El estado 'aprobado' solo se alcanza con confirmación de MP (AT-4.4). #}
+<div id="tarjeta-panel">
+  <p class="muted mono">Mercado Pago Point Smart 2 · contactless habilitado</p>
+
+  {% if error %}<div class="{{ 'warn' if state=='offline' else 'err' }}" role="alert">{{ error }}</div>{% endif %}
+
+  {% if state == 'idle' or state == 'error' or state == 'offline' or state == 'cancelado' %}
+    <button class="btn btn-primary" style="width:100%;"
+            hx-post="/cobro/tarjeta/iniciar" hx-target="#tarjeta-panel" hx-swap="outerHTML">
+      Enviar cobro a la terminal
+    </button>
+
+  {% elif state == 'waiting' or state == 'pendiente' %}
+    {# Polling cada 2 s (INTEGRATION §5 / UI_SPEC §5.3) hasta estado terminal. #}
+    <div class="panel" hx-get="/cobro/tarjeta/estado" hx-trigger="load delay:2s"
+         hx-target="#tarjeta-panel" hx-swap="outerHTML">
+      <div class="mono">Esperando pago en la terminal… ⏳</div>
+      <div class="muted">Order: {{ pago.mp_order_id }}</div>
+    </div>
+    <form hx-post="/cobro/tarjeta/cancelar" hx-target="#tarjeta-panel" hx-swap="outerHTML" style="margin-top:.5rem;">
+      <button class="btn btn-danger" style="width:100%;">Cancelar cobro</button>
+    </form>
+
+  {% elif state == 'aprobado' %}
+    <div class="ok">Pago aprobado.</div>
+    <a class="btn btn-primary" style="width:100%;text-align:center;"
+       href="/reimpresion?folio={{ venta.folio }}">Imprimir ticket</a>
+
+  {% elif state == 'rechazado' %}
+    <div class="err">Pago rechazado. Reintenta o cobra en efectivo.</div>
+    <button class="btn btn-primary" style="width:100%;"
+            hx-post="/cobro/tarjeta/iniciar" hx-target="#tarjeta-panel" hx-swap="outerHTML">
+      Reintentar tarjeta
+    </button>
+  {% endif %}
+</div>

@@ -1,0 +1,47 @@
+{% extends "shell.html" %}
+{% block title %}Cobro — {{ business_name }}{% endblock %}
+{% block content %}
+<div style="max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:1rem;">
+  <div class="total-card">
+    <div class="muted" style="color:#9fbfc2;">TOTAL A COBRAR · {{ venta.folio }}</div>
+    <div class="big">${{ '%.2f'|format(venta.total) }}</div>
+  </div>
+
+  {% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+
+  <div class="panel">
+    {# Segmento Efectivo | Tarjeta (UI_SPEC §5.3). Tarjeta vive en su parcial. #}
+    <div style="display:flex;gap:.5rem;margin-bottom:.8rem;">
+      <button class="btn btn-primary" onclick="seg('efectivo')" id="seg-efectivo">Efectivo</button>
+      <button class="btn" onclick="seg('tarjeta')" id="seg-tarjeta">Tarjeta</button>
+    </div>
+
+    <section id="pane-efectivo">
+      <form method="post" action="/cobro/efectivo">
+        <label for="recibido">Efectivo recibido (MXN)</label>
+        <input id="recibido" name="recibido" class="mono" inputmode="decimal"
+               style="font-size:1.4rem;text-align:right;" autofocus
+               value="{{ '%.2f'|format(venta.total) }}" />
+        <button class="btn btn-primary" type="submit" style="width:100%;margin-top:.8rem;">
+          Cobrar en efectivo (Enter)</button>
+      </form>
+    </section>
+
+    <section id="pane-tarjeta" style="display:none;"
+             hx-get="/cobro/tarjeta/panel" hx-trigger="revealed" hx-swap="innerHTML">
+      <div class="muted">Cargando terminal…</div>
+    </section>
+  </div>
+
+  <a class="btn" href="/venta">← Volver a la venta</a>
+</div>
+
+<script>
+  function seg(which) {
+    document.getElementById('pane-efectivo').style.display = which === 'efectivo' ? '' : 'none';
+    document.getElementById('pane-tarjeta').style.display = which === 'tarjeta' ? '' : 'none';
+    document.getElementById('seg-efectivo').className = which === 'efectivo' ? 'btn btn-primary' : 'btn';
+    document.getElementById('seg-tarjeta').className = which === 'tarjeta' ? 'btn btn-primary' : 'btn';
+  }
+</script>
+{% endblock %}
