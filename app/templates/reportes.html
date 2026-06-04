@@ -1,0 +1,37 @@
+{% extends "shell.html" %}
+{% block title %}Reportes — {{ business_name }}{% endblock %}
+{% block content %}
+<h2>Reportes</h2>
+<div style="display:flex;gap:.4rem;margin-bottom:1rem;align-items:center;">
+  <span class="muted">Periodo:</span>
+  <a class="btn {{ 'btn-primary' if periodo=='hoy' }}" href="/reportes?periodo=hoy">Hoy</a>
+  <a class="btn {{ 'btn-primary' if periodo=='7dias' }}" href="/reportes?periodo=7dias">7 días</a>
+  <a class="btn {{ 'btn-primary' if periodo=='mes' }}" href="/reportes?periodo=mes">Mes</a>
+  <a class="btn" href="/reportes/export?periodo={{ periodo }}" style="margin-left:auto;"
+     title="La app no timbra; exporta para timbrado externo a RFC genérico">Export fiscal (CSV)</a>
+</div>
+
+<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+  <div class="panel"><div class="muted">Ventas</div><div class="mono" style="font-size:1.6rem;">${{ '%.2f'|format(rep.total) }}</div></div>
+  <div class="panel"><div class="muted">Tickets</div><div class="mono" style="font-size:1.6rem;">{{ rep.num_tickets }}</div></div>
+  <div class="panel"><div class="muted">Ticket promedio</div><div class="mono" style="font-size:1.6rem;">${{ '%.2f'|format(rep.ticket_promedio) }}</div></div>
+  <div class="panel"><div class="muted">IVA (16%)</div><div class="mono" style="font-size:1.6rem;">${{ '%.2f'|format(rep.iva) }}</div></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+  <div class="panel">
+    <strong>Por medio de pago</strong>
+    {% for medio, monto in rep.por_medio.items() %}
+    <div style="display:flex;justify-content:space-between;"><span>{{ medio }}</span><span class="mono">${{ '%.2f'|format(monto) }}</span></div>
+    {% else %}<div class="muted">Sin datos.</div>{% endfor %}
+  </div>
+  <div class="panel">
+    <strong>Por cajero</strong>
+    {% for nombre, monto in rep.por_cajero.items() %}
+    <div style="display:flex;justify-content:space-between;"><span>{{ nombre }}</span><span class="mono">${{ '%.2f'|format(monto) }}</span></div>
+    {% else %}<div class="muted">Sin datos.</div>{% endfor %}
+  </div>
+</div>
+<p class="muted" style="margin-top:1rem;">El export entrega los datos para timbrado externo a RFC genérico
+  <span class="mono">XAXX010101000</span>. <b>La app no timbra (no CFDI).</b></p>
+{% endblock %}
