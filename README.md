@@ -90,5 +90,9 @@ maschinario-bazar/
 `docs/UI_SPEC.md` → `docs/ACCEPTANCE_TESTS.md`. El prototipo visual está en
 `docs/mockup/` (abre `index.html`, PIN demo `2468`).
 
+**Preparación de hardware (primer uso):** `docs/HARDWARE_SETUP.md` — guía paso a paso
+para estrenar impresora térmica, lector NETUM y terminal Mercado Pago Point Smart 2 en
+Ubuntu, con prueba end-to-end de todos los módulos.
+
 ---
 *POS Maschinario · Bazar · v1 · ticket = nota de compra (no CFDI); la app no timbra.*
