@@ -1,0 +1,53 @@
+{% extends "shell.html" %}
+{% block title %}Usuarios — {{ business_name }}{% endblock %}
+{% block content %}
+<h2>Usuarios / cajeros</h2>
+{% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+{% if msg %}<div class="ok">{{ msg }}</div>{% endif %}
+
+<div style="display:grid;grid-template-columns:1fr 300px;gap:1rem;">
+  <table>
+    <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Activo</th><th></th></tr></thead>
+    <tbody>
+    {% for u in usuarios %}
+      <tr>
+        <td class="mono">{{ u.usuario }}</td>
+        <td>{{ u.nombre }}</td>
+        <td>{{ u.rol.value if u.rol.value is defined else u.rol }}</td>
+        <td>{{ 'sí' if u.activo else 'no' }}</td>
+        <td style="display:flex;gap:.3rem;">
+          {% if es_admin(u) %}
+            <form method="post" action="/usuarios/{{ u.id }}/rol">
+              <input type="hidden" name="rol" value="cajero" />
+              <button class="btn" title="Quitar admin">Degradar</button>
+            </form>
+          {% else %}
+            <form method="post" action="/usuarios/{{ u.id }}/rol">
+              <input type="hidden" name="rol" value="administrador" />
+              <button class="btn btn-primary" title="Hacer admin">Elevar a admin</button>
+            </form>
+          {% endif %}
+          <form method="post" action="/usuarios/{{ u.id }}/activo">
+            <input type="hidden" name="activo" value="{{ 'false' if u.activo else 'true' }}" />
+            <button class="btn">{{ 'Desactivar' if u.activo else 'Activar' }}</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <form method="post" action="/usuarios/alta" class="panel">
+    <strong>Alta de cajero</strong>
+    <label>Usuario</label><input name="usuario" required />
+    <label>Nombre</label><input name="nombre" required />
+    <label>PIN</label><input name="pin" type="password" inputmode="numeric" required />
+    <label>Rol</label>
+    <select name="rol">
+      <option value="cajero">cajero</option>
+      <option value="administrador">administrador</option>
+    </select>
+    <button class="btn btn-primary" type="submit" style="margin-top:.6rem;">Crear</button>
+  </form>
+</div>
+{% endblock %}
