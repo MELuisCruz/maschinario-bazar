@@ -1,0 +1,12 @@
+{# Vista previa del ticket 80 mm + acción de reimprimir. #}
+<div id="reimp">
+  {% if msg %}<div class="ok">{{ msg }}</div>{% endif %}
+  {% if aviso %}<div class="warn" role="alert">{{ aviso }}</div>{% endif %}
+  {% if venta and preview %}
+    <div class="ticket">{{ preview }}</div>
+    <form hx-post="/reimpresion/imprimir" hx-target="#reimp" hx-swap="outerHTML" style="margin-top:.8rem;">
+      <input type="hidden" name="folio" value="{{ venta.folio }}" />
+      <button class="btn btn-primary" type="submit">Reimprimir ticket</button>
+    </form>
+  {% endif %}
+</div>
