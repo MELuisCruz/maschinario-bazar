@@ -1,0 +1,29 @@
+# Maschinario · Bazar — POS · PRY-F-0001.1.8
+# Despliegue híbrido (ARCHITECTURE.md ADR-002): solo la DB vive en contenedor;
+# la app FastAPI corre NATIVA en el host para el acceso USB a la impresora.
+#
+#   docker compose up -d db   # levanta PostgreSQL con volumen persistente
+#
+services:
+  db:
+    image: postgres:16
+    container_name: maschinario_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pos
+      POSTGRES_PASSWORD: pos
+      POSTGRES_DB: maschinario
+    ports:
+      # Puerto interno fijo (5432); el del host es configurable para evitar
+      # choques con un PostgreSQL ya instalado. Default 5432 (DB_HOST_PORT).
+      - "${DB_HOST_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pos -d maschinario"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

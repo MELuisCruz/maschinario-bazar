@@ -1,0 +1,33 @@
+# Maschinario · Bazar — POS · PRY-F-0001.1.8
+# Stack: FastAPI + Uvicorn · Jinja2 + HTMX (no SPA) · PostgreSQL ·
+#        SQLAlchemy + Alembic · python-escpos · Mercado Pago API de Orders · pytest
+
+# --- Web / render ---
+fastapi>=0.115
+uvicorn[standard]>=0.30
+jinja2>=3.1
+python-multipart>=0.0.9      # formularios HTMX
+itsdangerous>=2.2            # firma de cookies de sesión (SessionMiddleware)
+
+# --- Configuración ---
+pydantic>=2.7
+pydantic-settings>=2.3
+
+# --- Datos ---
+SQLAlchemy>=2.0
+alembic>=1.13
+psycopg[binary]>=3.2         # driver postgresql+psycopg
+
+# --- Seguridad (hash de PIN) ---
+bcrypt>=4.1
+
+# --- Integración Mercado Pago (cliente HTTP propio) ---
+httpx>=0.27
+
+# --- Impresión térmica ESC/POS ---
+python-escpos>=3.1
+
+# --- Pruebas y calidad ---
+pytest>=8.2
+black>=24.4
+ruff>=0.4
