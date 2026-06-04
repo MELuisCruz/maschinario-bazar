@@ -6,17 +6,38 @@
 # Python
 __pycache__/
 *.py[cod]
+*.pyo
 .venv/
 venv/
+env/
 *.egg-info/
+.eggs/
+build/
+dist/
+
+# Pruebas / cobertura / herramientas
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
 
-# Respaldos pg_dump (CLAUDE.md §5)
+# Respaldos / exports generados (CLAUDE.md §5)
 backup_*.sql
+export_fiscal_*.csv
+
+# Logs y temporales
+*.log
+*.bak
+*.tmp
 
 # SO / editor
 .DS_Store
+Thumbs.db
 *.swp
+*~
 .idea/
 .vscode/
