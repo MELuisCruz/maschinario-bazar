@@ -1,0 +1,22 @@
+# Secretos / entorno — CLAUDE.md §3: el .env NUNCA se versiona (sí .env.example)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Respaldos pg_dump (CLAUDE.md §5)
+backup_*.sql
+
+# SO / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
