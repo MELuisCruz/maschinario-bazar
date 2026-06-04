@@ -1,0 +1,13 @@
+{% extends "shell.html" %}
+{% block title %}Venta — {{ business_name }}{% endblock %}
+{% block content %}
+<form hx-post="/venta/scan" hx-target="#venta-main" hx-swap="outerHTML"
+      hx-on::after-request="this.reset(); document.getElementById('scan-input').focus();"
+      style="margin-bottom:.8rem;">
+  <label for="scan-input">Escanea o teclea el código</label>
+  <input id="scan-input" name="codigo" autocomplete="off"
+         placeholder="Código de barras / SKU" />
+</form>
+
+{% include "partials/_venta_main.html" %}
+{% endblock %}
