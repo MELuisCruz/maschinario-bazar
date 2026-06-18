@@ -17,6 +17,7 @@ from app.db import get_session
 from app.deps import require_admin, require_cajero, templates
 from app.models import Cajero, Producto
 from app.services import catalogo as cat
+from app.services.barcodes import code128_data_uri
 
 router = APIRouter(prefix="/catalogo", tags=["catalogo"])
 
@@ -51,6 +52,36 @@ def catalogo_home(
             "error": None,
             "msg": msg,
         },
+    )
+
+
+@router.get("/imprimible", response_class=HTMLResponse)
+def imprimible(
+    request: Request,
+    session: Session = Depends(get_session),
+    cajero: Cajero = Depends(require_cajero),
+):
+    """Hoja imprimible (PDF vía navegador) con nombre + código de barras por
+    producto, para escanear en caja. Codifica el SKU (o el código de barras si
+    existe) como Code128. Productos activos con código, ordenados por nombre.
+    """
+    productos = session.scalars(
+        select(Producto).where(Producto.activo.is_(True)).order_by(Producto.nombre)
+    ).all()
+    items = []
+    sin_codigo = 0
+    for p in productos:
+        codigo = p.sku or p.codigo_barras
+        if not codigo:
+            sin_codigo += 1
+            continue
+        items.append(
+            {"nombre": p.nombre, "codigo": codigo, "barcode": code128_data_uri(codigo)}
+        )
+    return templates.TemplateResponse(
+        request,
+        "catalogo_imprimible.html",
+        {"items": items, "sin_codigo": sin_codigo, "total": len(items)},
     )
 
 
