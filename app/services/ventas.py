@@ -103,6 +103,72 @@ def agregar_por_codigo(session: Session, venta: Venta, codigo: str) -> AltaResul
     return AltaResultado(linea=linea, aviso=None)
 
 
+# SKU reservado del producto singleton "Producto especial" (oculto: activo=False).
+ESPECIAL_SKU = "__ESPECIAL__"
+REF_MAX = 50
+NOTAS_MAX = 100
+
+
+def get_or_create_especial(session: Session) -> Producto:
+    """Producto singleton para ventas especiales (precio ad-hoc en caja).
+
+    Oculto del catálogo (`activo=False`) y sin control de stock. Se busca por
+    SKU reservado ignorando `activo`; las líneas snapshotean su propio precio.
+    """
+    p = session.scalar(select(Producto).where(Producto.sku == ESPECIAL_SKU))
+    if p is None:
+        p = Producto(
+            sku=ESPECIAL_SKU,
+            nombre="Producto especial",
+            precio=Decimal("0"),
+            iva_tasa=Decimal("0.160"),
+            existencia=Decimal("0"),
+            controla_stock=False,
+            activo=False,  # no aparece en catálogo ni en la hoja imprimible
+        )
+        session.add(p)
+        session.flush()
+    return p
+
+
+def agregar_especial(
+    session: Session,
+    venta: Venta,
+    referencia: str,
+    descripcion: str,
+    precio: Decimal,
+) -> VentaLinea:
+    """Agrega una línea de producto especial (precio ad-hoc, IVA 16% incluido).
+
+    `referencia` (≤50) sale en el ticket como «Producto especial: ref»;
+    `descripcion` (≤100) son notas internas de trazabilidad (no se imprimen).
+    Siempre crea una línea nueva (cada especial es distinto). No toca stock.
+    """
+    referencia = (referencia or "").strip()[:REF_MAX]
+    descripcion = (descripcion or "").strip()[:NOTAS_MAX]
+    precio = Decimal(precio)
+    if not referencia:
+        raise ValueError("La referencia del producto especial es obligatoria.")
+    if precio <= 0:
+        raise ValueError("El precio del producto especial debe ser mayor a 0.")
+    esp = get_or_create_especial(session)
+    linea = VentaLinea(
+        venta_id=venta.id,
+        producto_id=esp.id,
+        descripcion=f"Producto especial: {referencia}",
+        notas=descripcion or None,
+        cantidad=Decimal("1"),
+        precio_unit=precio,
+        iva_tasa=Decimal("0.160"),
+        descuento=Decimal("0"),
+        importe=line_importe(Decimal("1"), precio),
+    )
+    venta.lineas.append(linea)
+    session.flush()
+    recompute(session, venta)
+    return linea
+
+
 def set_cantidad(session: Session, linea: VentaLinea, cantidad: Decimal) -> None:
     venta = session.get(Venta, linea.venta_id)
     cantidad = Decimal(cantidad)

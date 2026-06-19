@@ -13,7 +13,9 @@
       {% for l in venta.lineas %}
         <tr>
           <td class="muted">{{ loop.index }}</td>
-          <td>{{ l.descripcion }}</td>
+          <td>{{ l.descripcion }}
+            {% if l.notas %}<div class="muted" style="font-size:.78rem;">📝 {{ l.notas }}</div>{% endif %}
+          </td>
           <td class="num">
             <form hx-post="/venta/linea/{{ l.id }}/cantidad" hx-target="#venta-main" hx-swap="outerHTML" style="display:inline;">
               <input class="mono" name="cantidad" value="{{ '%g'|format(l.cantidad) }}"

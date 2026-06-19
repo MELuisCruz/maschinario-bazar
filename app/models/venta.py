@@ -95,6 +95,7 @@ class VentaLinea(Base):
         BigInteger, ForeignKey("productos.id"), nullable=False
     )
     descripcion: Mapped[str] = mapped_column(Text, nullable=False)  # snapshot nombre
+    notas: Mapped[str | None] = mapped_column(Text)  # trazabilidad (producto especial)
     cantidad: Mapped[Decimal] = mapped_column(Numeric(12, 3), nullable=False)
     precio_unit: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), nullable=False

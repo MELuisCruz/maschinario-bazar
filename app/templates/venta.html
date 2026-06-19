@@ -3,11 +3,26 @@
 {% block content %}
 <form hx-post="/venta/scan" hx-target="#venta-main" hx-swap="outerHTML"
       hx-on::after-request="this.reset(); document.getElementById('scan-input').focus();"
-      style="margin-bottom:.8rem;">
+      style="margin-bottom:.6rem;">
   <label for="scan-input">Escanea o teclea el código</label>
   <input id="scan-input" name="codigo" autocomplete="off"
          placeholder="Código de barras / SKU" />
 </form>
+
+<details style="margin-bottom:.8rem;">
+  <summary class="btn" style="display:inline-block;cursor:pointer;">➕ Producto especial</summary>
+  <form hx-post="/venta/especial" hx-target="#venta-main" hx-swap="outerHTML"
+        hx-on::after-request="this.reset();"
+        class="panel" style="margin-top:.4rem;display:flex;flex-direction:column;gap:.3rem;max-width:480px;">
+    <label>Referencia <span class="muted">(sale en el ticket, máx. 50)</span></label>
+    <input name="referencia" maxlength="50" required placeholder="p. ej. Artículo a granel" />
+    <label>Descripción / notas <span class="muted">(interna, trazabilidad, máx. 100)</span></label>
+    <input name="descripcion" maxlength="100" placeholder="detalle (no se imprime en el ticket)" />
+    <label>Precio con IVA (16%)</label>
+    <input name="precio" class="mono" inputmode="decimal" required style="text-align:right;" />
+    <button class="btn btn-primary" type="submit" style="margin-top:.4rem;">Agregar producto especial</button>
+  </form>
+</details>
 
 {% include "partials/_venta_main.html" %}
 {% endblock %}

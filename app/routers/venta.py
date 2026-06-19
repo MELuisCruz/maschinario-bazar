@@ -71,6 +71,26 @@ def scan(
     return _main(request, venta, aviso)
 
 
+@router.post("/especial", response_class=HTMLResponse)
+def especial(
+    request: Request,
+    referencia: str = Form(""),
+    descripcion: str = Form(""),
+    precio: str = Form("0"),
+    session: Session = Depends(get_session),
+    ctx: tuple[Cajero, Turno] = Depends(require_turno),  # admin y cajero
+):
+    _, turno = ctx
+    venta = _venta_activa(session, turno)
+    aviso = None
+    try:
+        ventas.agregar_especial(session, venta, referencia, descripcion, _dec(precio))
+    except ValueError as exc:
+        aviso = str(exc)
+    session.commit()
+    return _main(request, venta, aviso)
+
+
 def _linea_de_turno(session: Session, linea_id: int, turno: Turno) -> VentaLinea | None:
     linea = session.get(VentaLinea, linea_id)
     if linea is None:
