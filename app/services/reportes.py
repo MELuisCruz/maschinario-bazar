@@ -25,6 +25,8 @@ class Reporte:
     ticket_promedio: Decimal = field(default=Decimal("0.00"))
     por_medio: dict[str, Decimal] = field(default_factory=dict)
     por_cajero: dict[str, Decimal] = field(default_factory=dict)
+    # Detalle de ventas del periodo (folio, fecha, total, estado) para verlas en pantalla.
+    ventas: list[dict] = field(default_factory=list)
 
 
 def generar(
@@ -62,6 +64,17 @@ def generar(
     ).all()
     por_cajero = {n: q2(v) for n, v in cajero_rows}
 
+    # Detalle por folio, más recientes primero.
+    detalle = [
+        {
+            "folio": v.folio,
+            "fecha": v.creado_en,
+            "total": q2(v.total),
+            "estado": v.estado.value if hasattr(v.estado, "value") else str(v.estado),
+        }
+        for v in sorted(ventas, key=lambda x: x.creado_en, reverse=True)
+    ]
+
     return Reporte(
         desde=desde,
         hasta=hasta,
@@ -71,4 +84,5 @@ def generar(
         ticket_promedio=promedio,
         por_medio=por_medio,
         por_cajero=por_cajero,
+        ventas=detalle,
     )

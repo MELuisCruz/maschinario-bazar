@@ -35,6 +35,19 @@ def test_at_8_1_totaliza_por_periodo_y_medio(db, turno, make_producto):
     assert "Ana Cajera" in rep.por_cajero
 
 
+def test_reporte_lista_folios_del_periodo(db, turno, make_producto):
+    v1 = _vender(db, turno, make_producto, "F1", "100.00")
+    v2 = _vender(db, turno, make_producto, "F2", "50.00")
+    desde, hasta = _rango_amplio()
+    rep = reportes.generar(db, desde, hasta)
+    folios = [x["folio"] for x in rep.ventas]
+    assert v1.folio in folios and v2.folio in folios
+    assert len(rep.ventas) == 2
+    for fila in rep.ventas:
+        assert {"folio", "fecha", "total", "estado"} <= set(fila)
+        assert fila["estado"] == "pagada"
+
+
 def test_at_8_2_export_fiscal_marca_y_rfc(db, turno, make_producto):
     v = _vender(db, turno, make_producto, "EX", "116.00")
     assert v.exportada_fiscal is False

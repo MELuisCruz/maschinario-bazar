@@ -32,6 +32,26 @@
     {% else %}<div class="muted">Sin datos.</div>{% endfor %}
   </div>
 </div>
+
+<div class="panel" style="margin-top:1rem;">
+  <strong>Ventas del periodo ({{ rep.ventas|length }})</strong>
+  <table style="margin-top:.5rem;">
+    <thead><tr><th>Folio</th><th>Fecha</th><th class="num">Total</th><th>Estado</th></tr></thead>
+    <tbody>
+    {% for v in rep.ventas %}
+      <tr>
+        <td class="mono">{{ v.folio }}</td>
+        <td>{{ v.fecha.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td class="num mono">${{ '%.2f'|format(v.total) }}</td>
+        <td>{{ v.estado }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="empty">Sin ventas en el periodo.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 <p class="muted" style="margin-top:1rem;">El export entrega los datos para timbrado externo a RFC genérico
   <span class="mono">XAXX010101000</span>. <b>La app no timbra (no CFDI).</b></p>
 {% endblock %}
