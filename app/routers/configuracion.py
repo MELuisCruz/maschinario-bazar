@@ -48,6 +48,8 @@ def guardar(
     ticket_domicilio: str = Form(""),
     ticket_telefono: str = Form(""),
     ticket_pie: str = Form(""),
+    ticket_fecha_formato: str = Form(""),
+    ticket_tz_offset: str = Form(""),
     session: Session = Depends(get_session),
     cajero: Cajero = Depends(require_admin),
 ):
@@ -59,6 +61,8 @@ def guardar(
             "ticket_domicilio": ticket_domicilio,
             "ticket_telefono": ticket_telefono,
             "ticket_pie": ticket_pie,
+            "ticket_fecha_formato": ticket_fecha_formato,
+            "ticket_tz_offset": ticket_tz_offset,
         },
     )
     session.commit()

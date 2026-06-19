@@ -22,6 +22,21 @@
   <label>Mensaje de pie</label>
   <input name="ticket_pie" value="{{ cfg.ticket_pie }}" placeholder="¡Gracias por su compra!" />
 
+  <hr style="margin:1rem 0;border:none;border-top:1px solid #ddd;">
+  <strong>Fecha y hora del ticket</strong>
+
+  <label>Formato de fecha/hora <span class="muted">(estilo strftime)</span></label>
+  <input name="ticket_fecha_formato" class="mono" value="{{ cfg.ticket_fecha_formato }}"
+         placeholder="%d-%m-%Y %H:%M" />
+  <p class="muted" style="margin:.2rem 0 .6rem;">
+    Ejemplos: <span class="mono">%d-%m-%Y %H:%M</span> → 18-06-2026 20:10 ·
+    <span class="mono">%Y-%m-%d %H:%M</span> → 2026-06-18 20:10. Se le agrega la zona (p. ej. «UTC-6»).
+  </p>
+
+  <label>Zona horaria <span class="muted">(offset UTC en horas)</span></label>
+  <input name="ticket_tz_offset" class="mono" inputmode="numeric"
+         value="{{ cfg.ticket_tz_offset }}" placeholder="-6" style="width:6rem;" />
+
   <button class="btn btn-primary" type="submit" style="margin-top:.8rem;">Guardar</button>
 </form>
 {% endblock %}

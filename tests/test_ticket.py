@@ -109,7 +109,8 @@ def test_at_9_3_reimpresion_identica_mas_leyenda(db, turno, make_producto):
         reimpresion=True,
         fecha_reimpresion=fecha,
     )
-    assert "*** REIMPRESIÓN 2026-06-04 10:30 ***" in reimp
+    # Formato configurable por defecto: DD-MM-YYYY HH:mm en UTC-6 (10:30 UTC → 04:30).
+    assert "*** REIMPRESIÓN 04-06-2026 04:30 UTC-6 ***" in reimp
     # Idéntico salvo la leyenda añadida al pie.
     assert reimp.startswith(base)
     # No altera datos de la venta.

@@ -9,10 +9,28 @@ reimpresión (AT-9.2). Sin cajón: no se emite `ESC p`.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 WIDTH = 48  # columnas en Font A (~72 mm)
+
+# Formato y zona horaria por defecto del timestamp (editables en Configuración).
+FECHA_FORMATO_DEFAULT = "%d-%m-%Y %H:%M"
+TZ_OFFSET_DEFAULT = -6  # UTC-6
+
+
+def _fmt_fecha(dt: datetime, fecha_formato: str, tz_offset: int) -> str:
+    """Convierte un datetime (UTC) a la zona local y lo formatea, con etiqueta TZ."""
+    if dt.tzinfo is None:  # asume UTC si viene naive
+        dt = dt.replace(tzinfo=timezone.utc)
+    local = dt.astimezone(timezone(timedelta(hours=tz_offset)))
+    formato = fecha_formato or FECHA_FORMATO_DEFAULT
+    try:
+        base = local.strftime(formato)
+    except (ValueError, TypeError):
+        base = local.strftime(FECHA_FORMATO_DEFAULT)
+    return f"{base} UTC{tz_offset:+d}"
+
 
 # Codepage de la impresora (Rongta RP850). CP850 cubre minúsculas y MAYÚSCULAS
 # acentuadas (ÁÉÍÓÚ áéíóú), ñ/Ñ y $; el default CP437 no trae las mayúsculas
@@ -51,15 +69,17 @@ def construir_ticket_texto(
     domicilio: str = "",
     telefono: str = "",
     pie: str = "¡Gracias por su compra!",
+    fecha_formato: str = FECHA_FORMATO_DEFAULT,
+    tz_offset: int = TZ_OFFSET_DEFAULT,
     pagos=None,
     reimpresion: bool = False,
     fecha_reimpresion: datetime | None = None,
 ) -> str:
     """Arma el texto del ticket (nota de compra, no CFDI).
 
-    `business_name` es el establecimiento; `evento`, `domicilio`, `telefono` y
-    `pie` son editables por el admin (services/configuracion.py) y se omiten si
-    vienen vacíos.
+    `business_name` es el establecimiento; `evento`, `domicilio`, `telefono`,
+    `pie`, `fecha_formato` (strftime) y `tz_offset` (horas UTC) son editables por
+    el admin (services/configuracion.py); los textos vacíos se omiten.
     """
     pagos = list(pagos if pagos is not None else getattr(venta, "pagos", []))
     fecha = venta.cerrado_en or venta.creado_en
@@ -74,7 +94,7 @@ def construir_ticket_texto(
     lineas.append(_center("NOTA DE COMPRA  (no es CFDI)"))
     lineas.append(_sep())
     lineas.append(f"Folio: {venta.folio}")
-    lineas.append(f"Fecha: {fecha.strftime('%Y-%m-%d %H:%M')}")
+    lineas.append(f"Fecha: {_fmt_fecha(fecha, fecha_formato, tz_offset)}")
     lineas.append(f"Cajero: {cajero_nombre}")
     lineas.append(_sep())
     lineas.append(_lr("CANT DESCRIPCION", "IMPORTE"))
@@ -101,7 +121,7 @@ def construir_ticket_texto(
     lineas.append(_sep())
     lineas.append(_center(pie.strip() or "¡Gracias por su compra!"))
     if reimpresion:
-        f = (fecha_reimpresion or fecha).strftime("%Y-%m-%d %H:%M")
+        f = _fmt_fecha(fecha_reimpresion or fecha, fecha_formato, tz_offset)
         lineas.append(_center(f"*** REIMPRESIÓN {f} ***"))
     return "\n".join(lineas)
 
@@ -132,6 +152,8 @@ def imprimir_ticket(
     domicilio: str = "",
     telefono: str = "",
     pie: str = "¡Gracias por su compra!",
+    fecha_formato: str = FECHA_FORMATO_DEFAULT,
+    tz_offset: int = TZ_OFFSET_DEFAULT,
     pagos=None,
     reimpresion: bool = False,
     fecha_reimpresion: datetime | None = None,
@@ -147,6 +169,8 @@ def imprimir_ticket(
         domicilio=domicilio,
         telefono=telefono,
         pie=pie,
+        fecha_formato=fecha_formato,
+        tz_offset=tz_offset,
         pagos=pagos,
         reimpresion=reimpresion,
         fecha_reimpresion=fecha_reimpresion,

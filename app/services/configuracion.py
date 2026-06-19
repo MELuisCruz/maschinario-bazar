@@ -22,7 +22,13 @@ TICKET_KEYS = (
     "ticket_domicilio",
     "ticket_telefono",
     "ticket_pie",
+    "ticket_fecha_formato",
+    "ticket_tz_offset",
 )
+
+# Formato y zona horaria por defecto del timestamp del ticket.
+FECHA_FORMATO_DEFAULT = "%d-%m-%Y %H:%M"
+TZ_OFFSET_DEFAULT = -6  # UTC-6
 
 
 def _defaults() -> dict[str, str]:
@@ -32,6 +38,8 @@ def _defaults() -> dict[str, str]:
         "ticket_domicilio": "",
         "ticket_telefono": "",
         "ticket_pie": "¡Gracias por su compra!",
+        "ticket_fecha_formato": FECHA_FORMATO_DEFAULT,
+        "ticket_tz_offset": str(TZ_OFFSET_DEFAULT),
     }
 
 
@@ -46,15 +54,21 @@ def get_config(session: Session) -> dict[str, str]:
     return cfg
 
 
-def ticket_kwargs(session: Session) -> dict[str, str]:
+def ticket_kwargs(session: Session) -> dict:
     """Config del ticket en los nombres de parámetro que espera `printing`."""
     c = get_config(session)
+    try:
+        tz_offset = int(c["ticket_tz_offset"])
+    except (ValueError, TypeError):
+        tz_offset = TZ_OFFSET_DEFAULT
     return {
         "business_name": c["ticket_establecimiento"],
         "evento": c["ticket_evento"],
         "domicilio": c["ticket_domicilio"],
         "telefono": c["ticket_telefono"],
         "pie": c["ticket_pie"],
+        "fecha_formato": c["ticket_fecha_formato"] or FECHA_FORMATO_DEFAULT,
+        "tz_offset": tz_offset,
     }
 
 

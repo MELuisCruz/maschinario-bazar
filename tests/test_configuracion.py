@@ -85,6 +85,33 @@ def test_ticket_omite_campos_vacios():
     assert "¡Gracias por su compra!" in texto  # pie por defecto
 
 
+def test_ticket_fecha_formato_y_tz_por_defecto():
+    # _venta_stub usa cerrado_en = 2026-06-18 12:00 UTC → UTC-6 = 06:00.
+    texto = construir_ticket_texto(
+        _venta_stub(), cajero_nombre="Ana", business_name="Bazar"
+    )
+    assert "Fecha: 18-06-2026 06:00 UTC-6" in texto
+
+
+def test_ticket_fecha_formato_configurable():
+    texto = construir_ticket_texto(
+        _venta_stub(),
+        cajero_nombre="Ana",
+        business_name="Bazar",
+        fecha_formato="%Y/%m/%d %H:%M",
+        tz_offset=0,
+    )
+    assert "Fecha: 2026/06/18 12:00 UTC+0" in texto
+
+
+def test_defaults_incluyen_fecha_y_tz(db):
+    cfg = cfg_svc.get_config(db)
+    assert cfg["ticket_fecha_formato"] == "%d-%m-%Y %H:%M"
+    assert cfg["ticket_tz_offset"] == "-6"
+    kw = cfg_svc.ticket_kwargs(db)
+    assert kw["tz_offset"] == -6 and kw["fecha_formato"] == "%d-%m-%Y %H:%M"
+
+
 def test_admin_ve_y_guarda(op_client):
     r = op_client.get("/configuracion")
     assert r.status_code == 200
