@@ -21,6 +21,7 @@ from app.routers import (
     auth,
     catalogo,
     cobro,
+    configuracion,
     corte,
     devolucion,
     reimpresion,
@@ -65,6 +66,7 @@ app.include_router(corte.router)
 app.include_router(reportes.router)
 app.include_router(reimpresion.router)
 app.include_router(usuarios.router)
+app.include_router(configuracion.router)
 
 
 @app.get("/")

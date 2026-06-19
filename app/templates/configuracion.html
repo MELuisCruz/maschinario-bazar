@@ -1,0 +1,27 @@
+{% extends "shell.html" %}
+{% block title %}Configuración — {{ business_name }}{% endblock %}
+{% block content %}
+<h2>Configuración del ticket</h2>
+{% if msg %}<div class="ok">{{ msg }}</div>{% endif %}
+<p class="muted">Estos textos aparecen en el ticket impreso. La leyenda legal
+  «NOTA DE COMPRA (no es CFDI)» es fija y no se edita.</p>
+
+<form method="post" action="/configuracion" class="panel" style="max-width:520px;">
+  <label>Nombre del establecimiento</label>
+  <input name="ticket_establecimiento" value="{{ cfg.ticket_establecimiento }}" required />
+
+  <label>Nombre del evento <span class="muted">(opcional)</span></label>
+  <input name="ticket_evento" value="{{ cfg.ticket_evento }}" placeholder="p. ej. Bazar Navideño 2026" />
+
+  <label>Domicilio <span class="muted">(opcional)</span></label>
+  <input name="ticket_domicilio" value="{{ cfg.ticket_domicilio }}" placeholder="Calle, número, colonia" />
+
+  <label>Teléfono <span class="muted">(opcional)</span></label>
+  <input name="ticket_telefono" value="{{ cfg.ticket_telefono }}" placeholder="55 1234 5678" />
+
+  <label>Mensaje de pie</label>
+  <input name="ticket_pie" value="{{ cfg.ticket_pie }}" placeholder="¡Gracias por su compra!" />
+
+  <button class="btn btn-primary" type="submit" style="margin-top:.8rem;">Guardar</button>
+</form>
+{% endblock %}

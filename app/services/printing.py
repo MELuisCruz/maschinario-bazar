@@ -41,15 +41,30 @@ def construir_ticket_texto(
     *,
     cajero_nombre: str,
     business_name: str,
+    evento: str = "",
+    domicilio: str = "",
+    telefono: str = "",
+    pie: str = "¡Gracias por su compra!",
     pagos=None,
     reimpresion: bool = False,
     fecha_reimpresion: datetime | None = None,
 ) -> str:
-    """Arma el texto del ticket (nota de compra, no CFDI)."""
+    """Arma el texto del ticket (nota de compra, no CFDI).
+
+    `business_name` es el establecimiento; `evento`, `domicilio`, `telefono` y
+    `pie` son editables por el admin (services/configuracion.py) y se omiten si
+    vienen vacíos.
+    """
     pagos = list(pagos if pagos is not None else getattr(venta, "pagos", []))
     fecha = venta.cerrado_en or venta.creado_en
     lineas: list[str] = []
     lineas.append(_center(business_name.upper()))
+    if evento.strip():
+        lineas.append(_center(evento.strip()))
+    if domicilio.strip():
+        lineas.append(_center(domicilio.strip()))
+    if telefono.strip():
+        lineas.append(_center(f"Tel: {telefono.strip()}"))
     lineas.append(_center("NOTA DE COMPRA  (no es CFDI)"))
     lineas.append(_sep())
     lineas.append(f"Folio: {venta.folio}")
@@ -78,7 +93,7 @@ def construir_ticket_texto(
             ref = (p.mp_order_id or "")[-8:]
             lineas.append(_lr("Pago: Tarjeta Point", f"Aprob. {ref}"))
     lineas.append(_sep())
-    lineas.append(_center("¡Gracias por su compra!"))
+    lineas.append(_center(pie.strip() or "¡Gracias por su compra!"))
     if reimpresion:
         f = (fecha_reimpresion or fecha).strftime("%Y-%m-%d %H:%M")
         lineas.append(_center(f"*** REIMPRESIÓN {f} ***"))
@@ -107,6 +122,10 @@ def imprimir_ticket(
     *,
     cajero_nombre: str,
     business_name: str,
+    evento: str = "",
+    domicilio: str = "",
+    telefono: str = "",
+    pie: str = "¡Gracias por su compra!",
     pagos=None,
     reimpresion: bool = False,
     fecha_reimpresion: datetime | None = None,
@@ -118,6 +137,10 @@ def imprimir_ticket(
         venta,
         cajero_nombre=cajero_nombre,
         business_name=business_name,
+        evento=evento,
+        domicilio=domicilio,
+        telefono=telefono,
+        pie=pie,
         pagos=pagos,
         reimpresion=reimpresion,
         fecha_reimpresion=fecha_reimpresion,

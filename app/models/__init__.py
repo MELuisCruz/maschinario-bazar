@@ -7,6 +7,7 @@ paquete registra todas las entidades en `Base.metadata`.
 
 from app.db import Base
 from app.models.cajero import Cajero
+from app.models.configuracion import Configuracion
 from app.models.devolucion import Devolucion, DevolucionLinea
 from app.models.enums import (
     EstadoPago,
@@ -24,6 +25,7 @@ from app.models.venta import Venta, VentaLinea
 __all__ = [
     "Base",
     "Cajero",
+    "Configuracion",
     "Turno",
     "Producto",
     "Venta",

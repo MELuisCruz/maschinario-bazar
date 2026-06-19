@@ -17,6 +17,7 @@ from app.config import get_settings
 from app.db import get_session
 from app.deps import require_turno, templates
 from app.models import Cajero, Turno, Venta
+from app.services import configuracion as cfg_svc
 from app.services import printing
 
 router = APIRouter(prefix="/reimpresion", tags=["reimpresion"])
@@ -29,6 +30,18 @@ def _buscar(session: Session, folio: str) -> Venta | None:
 def _cajero_nombre(session: Session, venta: Venta) -> str:
     c = session.get(Cajero, venta.cajero_id)
     return c.nombre if c else "—"
+
+
+def _ticket_cfg(session: Session) -> dict[str, str]:
+    """Campos editables del ticket (admin) en los nombres que espera printing."""
+    c = cfg_svc.get_config(session)
+    return {
+        "business_name": c["ticket_establecimiento"],
+        "evento": c["ticket_evento"],
+        "domicilio": c["ticket_domicilio"],
+        "telefono": c["ticket_telefono"],
+        "pie": c["ticket_pie"],
+    }
 
 
 @router.get("", response_class=HTMLResponse)
@@ -45,8 +58,8 @@ def reimpresion_home(
         preview = printing.construir_ticket_texto(
             venta,
             cajero_nombre=_cajero_nombre(session, venta),
-            business_name=get_settings().app_business_name,
             pagos=venta.pagos,
+            **_ticket_cfg(session),
         )
     return templates.TemplateResponse(
         request,
@@ -87,11 +100,11 @@ def imprimir(
         res = printing.imprimir_ticket(
             venta,
             cajero_nombre=_cajero_nombre(session, venta),
-            business_name=get_settings().app_business_name,
             pagos=venta.pagos,
             reimpresion=True,
             fecha_reimpresion=datetime.now(timezone.utc),
             settings=get_settings(),
+            **_ticket_cfg(session),
         )
         if res.ok:
             msg = "Ticket reenviado a la impresora."
@@ -111,8 +124,8 @@ def _render_preview(
         preview = printing.construir_ticket_texto(
             venta,
             cajero_nombre=_cajero_nombre(session, venta),
-            business_name=get_settings().app_business_name,
             pagos=venta.pagos,
+            **_ticket_cfg(session),
         )
     return templates.TemplateResponse(
         request,

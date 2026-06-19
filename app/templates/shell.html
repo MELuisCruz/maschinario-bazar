@@ -13,6 +13,7 @@
     <a href="/reportes"   class="{{ 'active' if active=='reportes' }}">Reportes</a>
     <a href="/corte"      class="{{ 'active' if active=='corte' }}">Corte de caja</a>
     {% if es_admin(cajero) %}<a href="/usuarios" class="{{ 'active' if active=='usuarios' }}">Usuarios</a>{% endif %}
+    {% if es_admin(cajero) %}<a href="/configuracion" class="{{ 'active' if active=='configuracion' }}">Configuración</a>{% endif %}
   </nav>
   <div class="session">
     <span>{{ business_name }}</span>
