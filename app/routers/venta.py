@@ -95,7 +95,29 @@ def especial(
 
 
 @router.post("/linea/{linea_id}/divisa", response_class=HTMLResponse)
-def precio_divisa(
+def cambiar_divisa(
+    linea_id: int,
+    request: Request,
+    divisa: str = Form("MXN"),
+    session: Session = Depends(get_session),
+    ctx: tuple[Cajero, Turno] = Depends(require_turno),  # admin y cajero
+):
+    """Solo cambia la divisa de visualización del precio (no edita el precio)."""
+    _, turno = ctx
+    linea = _linea_de_turno(session, linea_id, turno)
+    venta = _venta_activa(session, turno)
+    aviso = None
+    if linea is not None:
+        try:
+            ventas.set_divisa(session, linea, divisa)
+        except ValueError as exc:
+            aviso = str(exc)
+    session.commit()
+    return _main(request, venta, aviso)
+
+
+@router.post("/linea/{linea_id}/precio-especial", response_class=HTMLResponse)
+def precio_especial(
     linea_id: int,
     request: Request,
     divisa: str = Form("MXN"),
@@ -103,13 +125,14 @@ def precio_divisa(
     session: Session = Depends(get_session),
     ctx: tuple[Cajero, Turno] = Depends(require_turno),  # admin y cajero
 ):
+    """Edita el precio de una línea de producto especial (única excepción)."""
     _, turno = ctx
     linea = _linea_de_turno(session, linea_id, turno)
     venta = _venta_activa(session, turno)
     aviso = None
     if linea is not None:
         try:
-            ventas.set_precio_divisa(session, linea, divisa, _dec(monto))
+            ventas.set_precio_especial(session, linea, divisa, _dec(monto))
         except ValueError as exc:
             aviso = str(exc)
     session.commit()

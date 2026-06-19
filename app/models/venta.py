@@ -118,3 +118,10 @@ class VentaLinea(Base):
     )  # (cantidad*precio_unit) - descuento
 
     venta: Mapped["Venta"] = relationship(back_populates="lineas")
+    producto: Mapped["Producto"] = relationship(viewonly=True)  # noqa: F821
+
+    @property
+    def es_especial(self) -> bool:
+        """True si la línea es un 'producto especial' (precio editable)."""
+        p = self.producto
+        return bool(p is not None and p.sku == "__ESPECIAL__")

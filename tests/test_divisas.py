@@ -50,21 +50,47 @@ def test_especial_en_divisa(db, turno):
     assert ln.precio_unit == D("175.00")  # 10 * 17.50 → total en MXN
 
 
-def test_set_precio_divisa_por_linea_ida_y_vuelta(db, turno, make_producto):
-    divisas.set_rates(db, D("18"), D("20"))
+def test_set_divisa_solo_visualiza_no_cambia_precio(db, turno, make_producto):
+    # Catálogo: cambiar divisa NO toca el precio MXN ni el importe; solo muestra
+    # el unitario convertido. (Regla: el precio no se edita salvo especial.)
+    divisas.set_rates(db, D("20"), D("25"))
     db.commit()
     make_producto(codigo="PX", precio="100.00", existencia="5")
     v = ventas.get_or_create_venta(db, turno.id, turno.cajero_id)
     ventas.agregar_por_codigo(db, v, "PX")
     ln = v.lineas[0]
-    ventas.set_precio_divisa(db, ln, "USD", D("3"))
+    ventas.set_divisa(db, ln, "USD")
+    db.commit()
+    assert ln.divisa == "USD"
+    assert ln.precio_unit == D("100.00")  # MXN intacto
+    assert ln.precio_divisa == D("5.00")  # 100 / 20 (solo display)
+    assert ln.importe == D("100.00")  # importe siempre MXN
+    ventas.set_divisa(db, ln, "MXN")
+    db.commit()
+    assert ln.divisa == "MXN" and ln.precio_divisa is None and ln.tipo_cambio is None
+
+
+def test_set_precio_especial_rechaza_catalogo(db, turno, make_producto):
+    divisas.set_rates(db, D("20"), D("25"))
+    db.commit()
+    make_producto(codigo="PY", precio="100.00", existencia="5")
+    v = ventas.get_or_create_venta(db, turno.id, turno.cajero_id)
+    ventas.agregar_por_codigo(db, v, "PY")
+    ln = v.lineas[0]
+    with pytest.raises(ValueError):  # no es producto especial
+        ventas.set_precio_especial(db, ln, "USD", D("3"))
+    db.rollback()
+
+
+def test_set_precio_especial_edita_especial(db, turno):
+    divisas.set_rates(db, D("18"), D("20"))
+    db.commit()
+    v = ventas.get_or_create_venta(db, turno.id, turno.cajero_id)
+    ln = ventas.agregar_especial(db, v, "Granel", "", D("10"), "MXN")
+    db.commit()
+    ventas.set_precio_especial(db, ln, "USD", D("3"))
     db.commit()
     assert ln.divisa == "USD" and ln.precio_unit == D("54.00")  # 3 * 18
-    ventas.set_precio_divisa(db, ln, "MXN", D("99"))
-    db.commit()
-    assert ln.divisa == "MXN"
-    assert ln.precio_unit == D("99.00")
-    assert ln.precio_divisa is None and ln.tipo_cambio is None
 
 
 def test_ticket_muestra_divisa_y_tc(db, turno):
@@ -105,15 +131,32 @@ def test_http_especial_divisa_cajero(basic_client, db):
     assert "USD" in r.text  # la línea muestra la divisa
 
 
-def test_http_precio_divisa_sin_tc_avisa(op_client, db, make_producto):
-    # Sin tipo de cambio configurado, intentar precio en USD avisa (no rompe).
+def test_http_cambiar_divisa_sin_tc_avisa(op_client, db, make_producto):
+    # Sin tipo de cambio configurado, cambiar la divisa de display avisa (no rompe).
     make_producto(codigo="DZ", precio="50.00", existencia="3")
     op_client.post("/venta/scan", data={"codigo": "DZ"})
     from app.models import VentaLinea
 
     ln = db.query(VentaLinea).first()
-    r = op_client.post(
-        f"/venta/linea/{ln.id}/divisa", data={"divisa": "USD", "monto": "2"}
-    )
+    r = op_client.post(f"/venta/linea/{ln.id}/divisa", data={"divisa": "USD"})
     assert r.status_code == 200
     assert "tipo de cambio" in r.text.lower()
+
+
+def test_http_precio_especial_rechaza_en_catalogo(op_client, db, make_producto):
+    # Intentar editar precio (endpoint de especial) en un producto de catálogo:
+    # se rechaza (el precio de catálogo no se edita).
+    divisas.set_rates(db, D("18"), D("20"))
+    db.commit()
+    make_producto(codigo="CAT", precio="50.00", existencia="3")
+    op_client.post("/venta/scan", data={"codigo": "CAT"})
+    from app.models import VentaLinea
+
+    ln = db.query(VentaLinea).first()
+    r = op_client.post(
+        f"/venta/linea/{ln.id}/precio-especial", data={"divisa": "USD", "monto": "9"}
+    )
+    assert r.status_code == 200
+    assert "solo el producto especial" in r.text.lower()
+    db.expire_all()
+    assert db.get(VentaLinea, ln.id).precio_unit == D("50.00")  # precio intacto

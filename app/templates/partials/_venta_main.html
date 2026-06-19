@@ -24,21 +24,37 @@
             </form>
           </td>
           <td class="num">
-            <form hx-post="/venta/linea/{{ l.id }}/divisa" hx-target="#venta-main" hx-swap="outerHTML"
+            {% set dv = l.divisa or 'MXN' %}
+            {% if l.es_especial %}
+            {# Producto especial: precio EDITABLE (valor + divisa) #}
+            <form hx-post="/venta/linea/{{ l.id }}/precio-especial" hx-target="#venta-main" hx-swap="outerHTML"
                   style="display:flex;gap:.2rem;justify-content:flex-end;">
               <select name="divisa" onchange="this.form.requestSubmit()" style="width:3.6rem;padding:.1rem;">
-                {% set dv = l.divisa or 'MXN' %}
                 <option value="MXN" {{ 'selected' if dv=='MXN' }}>MXN</option>
                 <option value="USD" {{ 'selected' if dv=='USD' }}>USD</option>
                 <option value="EUR" {{ 'selected' if dv=='EUR' }}>EUR</option>
               </select>
               <input class="mono" name="monto"
-                     value="{{ '%.2f'|format(l.precio_divisa if (l.divisa and l.divisa!='MXN' and l.precio_divisa is not none) else l.precio_unit) }}"
+                     value="{{ '%.2f'|format(l.precio_divisa if (dv!='MXN' and l.precio_divisa is not none) else l.precio_unit) }}"
                      inputmode="decimal" style="width:4.5rem;text-align:right;"
                      onchange="this.form.requestSubmit()" />
             </form>
-            {% if l.divisa and l.divisa != 'MXN' %}
-            <div class="muted" style="font-size:.72rem;">@ {{ '%.4f'|format(l.tipo_cambio) }} = ${{ '%.2f'|format(l.precio_unit) }}</div>
+            {% else %}
+            {# Catálogo: el precio NO se edita; el selector solo cambia la divisa de visualización #}
+            <form hx-post="/venta/linea/{{ l.id }}/divisa" hx-target="#venta-main" hx-swap="outerHTML"
+                  style="display:flex;gap:.2rem;justify-content:flex-end;align-items:center;">
+              <span class="mono">
+                {% if dv != 'MXN' and l.precio_divisa is not none %}{{ dv }} {{ '%.2f'|format(l.precio_divisa) }}{% else %}${{ '%.2f'|format(l.precio_unit) }}{% endif %}
+              </span>
+              <select name="divisa" onchange="this.form.requestSubmit()" style="width:3.6rem;padding:.1rem;">
+                <option value="MXN" {{ 'selected' if dv=='MXN' }}>MXN</option>
+                <option value="USD" {{ 'selected' if dv=='USD' }}>USD</option>
+                <option value="EUR" {{ 'selected' if dv=='EUR' }}>EUR</option>
+              </select>
+            </form>
+            {% endif %}
+            {% if dv != 'MXN' and l.tipo_cambio %}
+            <div class="muted" style="font-size:.72rem;">@ {{ '%.4f'|format(l.tipo_cambio) }} · unit ${{ '%.2f'|format(l.precio_unit) }} MXN</div>
             {% endif %}
           </td>
           <td class="num">

@@ -181,14 +181,39 @@ def agregar_especial(
     return linea
 
 
-def set_precio_divisa(
+def set_divisa(session: Session, linea: VentaLinea, divisa: str) -> None:
+    """Cambia SOLO la divisa de visualización del precio unitario.
+
+    El precio en MXN (precio_unit) y el importe NO cambian; se calcula el precio
+    unitario equivalente en la divisa elegida para mostrarlo. Aplica a cualquier
+    línea (regla: el precio no se edita; ver `set_precio_especial`).
+    """
+    divisa = (divisa or "MXN").upper()
+    try:
+        monto_div, tc = divisas.a_divisa(session, Decimal(linea.precio_unit), divisa)
+    except divisas.TipoCambioNoConfigurado as exc:
+        raise ValueError(str(exc)) from exc
+    linea.divisa = divisa
+    if divisa == "MXN":
+        linea.precio_divisa = None
+        linea.tipo_cambio = None
+    else:
+        linea.precio_divisa = monto_div
+        linea.tipo_cambio = tc
+    session.flush()
+    recompute(session, linea.venta)  # importe sigue en MXN (precio_unit intacto)
+
+
+def set_precio_especial(
     session: Session, linea: VentaLinea, divisa: str, monto: Decimal
 ) -> None:
-    """Re-precia una línea capturando el monto en MXN/USD/EUR; convierte a MXN.
+    """Edita el precio de una línea de PRODUCTO ESPECIAL (única excepción).
 
-    El total de la venta siempre queda en MXN. Lanza ValueError si la divisa no
-    tiene tipo de cambio configurado o el monto no es válido.
+    El monto se captura en `divisa` y se convierte a MXN (precio_unit). El total
+    siempre queda en MXN. Rechaza líneas que no sean producto especial.
     """
+    if not linea.es_especial:
+        raise ValueError("Solo el producto especial permite editar el precio.")
     monto = Decimal(monto)
     if monto <= 0:
         raise ValueError("El precio debe ser mayor a 0.")

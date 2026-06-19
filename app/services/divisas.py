@@ -85,11 +85,8 @@ def actualizar_desde_api(session: Session) -> dict[str, Decimal]:
     return api
 
 
-def convertir(session: Session, monto: Decimal, divisa: str) -> tuple[Decimal, Decimal]:
-    """Convierte `monto` en `divisa` a (mxn, tipo_cambio). MXN → (monto, 1)."""
+def _rate(session: Session, divisa: str) -> Decimal:
     divisa = (divisa or "MXN").upper()
-    if divisa == "MXN":
-        return Decimal(monto), Decimal("1")
     if divisa not in MONEDAS:
         raise TipoCambioNoConfigurado(f"Divisa no soportada: {divisa}")
     rate = get_rates(session)[divisa]
@@ -97,5 +94,22 @@ def convertir(session: Session, monto: Decimal, divisa: str) -> tuple[Decimal, D
         raise TipoCambioNoConfigurado(
             f"Define el tipo de cambio {divisa}→MXN en Configuración."
         )
-    mxn = (Decimal(monto) * rate).quantize(Decimal("0.01"))
-    return mxn, rate
+    return rate
+
+
+def convertir(session: Session, monto: Decimal, divisa: str) -> tuple[Decimal, Decimal]:
+    """Monto EN divisa → (mxn, tipo_cambio). Para precios capturados en divisa
+    (producto especial). MXN → (monto, 1)."""
+    if (divisa or "MXN").upper() == "MXN":
+        return Decimal(monto), Decimal("1")
+    rate = _rate(session, divisa)
+    return (Decimal(monto) * rate).quantize(Decimal("0.01")), rate
+
+
+def a_divisa(session: Session, mxn: Decimal, divisa: str) -> tuple[Decimal, Decimal]:
+    """Monto en MXN → (monto en divisa, tipo_cambio). Para MOSTRAR un precio MXN
+    fijo en otra divisa (catálogo). MXN → (monto, 1)."""
+    if (divisa or "MXN").upper() == "MXN":
+        return Decimal(mxn), Decimal("1")
+    rate = _rate(session, divisa)
+    return (Decimal(mxn) / rate).quantize(Decimal("0.01")), rate
