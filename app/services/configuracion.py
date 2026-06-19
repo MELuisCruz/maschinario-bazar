@@ -46,6 +46,18 @@ def get_config(session: Session) -> dict[str, str]:
     return cfg
 
 
+def ticket_kwargs(session: Session) -> dict[str, str]:
+    """Config del ticket en los nombres de parámetro que espera `printing`."""
+    c = get_config(session)
+    return {
+        "business_name": c["ticket_establecimiento"],
+        "evento": c["ticket_evento"],
+        "domicilio": c["ticket_domicilio"],
+        "telefono": c["ticket_telefono"],
+        "pie": c["ticket_pie"],
+    }
+
+
 def set_config(session: Session, valores: dict[str, str]) -> None:
     """Upsert de las claves recibidas (solo las conocidas del ticket)."""
     for clave in TICKET_KEYS:

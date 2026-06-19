@@ -34,14 +34,7 @@ def _cajero_nombre(session: Session, venta: Venta) -> str:
 
 def _ticket_cfg(session: Session) -> dict[str, str]:
     """Campos editables del ticket (admin) en los nombres que espera printing."""
-    c = cfg_svc.get_config(session)
-    return {
-        "business_name": c["ticket_establecimiento"],
-        "evento": c["ticket_evento"],
-        "domicilio": c["ticket_domicilio"],
-        "telefono": c["ticket_telefono"],
-        "pie": c["ticket_pie"],
-    }
+    return cfg_svc.ticket_kwargs(session)
 
 
 @router.get("", response_class=HTMLResponse)

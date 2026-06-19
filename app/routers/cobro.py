@@ -18,7 +18,8 @@ from app.db import get_session
 from app.deps import get_mp_client, require_turno, templates
 from app.models import Cajero, Pago, Turno
 from app.services import cobro as cobro_svc
-from app.services import mp_point, ventas
+from app.services import configuracion as cfg_svc
+from app.services import mp_point, printing, ventas
 from app.services.mp_point import MPClient
 
 router = APIRouter(prefix="/cobro", tags=["cobro"])
@@ -75,10 +76,26 @@ def cobrar_efectivo(
             status_code=400,
         )
     session.commit()
+    # Efectivo: imprime el ticket automáticamente (no rompe la venta si falla;
+    # queda disponible para reimpresión por folio — AT-9.2).
+    res = printing.imprimir_ticket(
+        venta,
+        cajero_nombre=cajero.nombre,
+        pagos=venta.pagos,
+        settings=get_settings(),
+        **cfg_svc.ticket_kwargs(session),
+    )
     return templates.TemplateResponse(
         request,
         "cobro_ok.html",
-        {"venta": venta, "pago": pago, "cajero": cajero, "active_nav": "venta"},
+        {
+            "venta": venta,
+            "pago": pago,
+            "cajero": cajero,
+            "active_nav": "venta",
+            "print_ok": res.ok,
+            "print_error": res.error,
+        },
     )
 
 

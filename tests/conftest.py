@@ -48,6 +48,20 @@ def _clean():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _sin_impresora(monkeypatch):
+    """Los tests nunca tocan la impresora física: get_printer siempre 'falla'.
+
+    El flujo de impresión es tolerante (imprimir_ticket devuelve ok=False), así
+    que cobro/reimpresión se prueban sin enviar nada por USB.
+    """
+
+    def _no_printer(_settings=None):
+        raise RuntimeError("sin impresora (test)")
+
+    monkeypatch.setattr("app.services.printing.get_printer", _no_printer)
+
+
 @pytest.fixture
 def db() -> Session:
     s = TestSession()
