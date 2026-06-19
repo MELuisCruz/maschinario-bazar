@@ -49,6 +49,16 @@ def _clean():
 
 
 @pytest.fixture(autouse=True)
+def _reset_login_guard():
+    """Limpia el estado anti-fuerza-bruta del login entre tests (aislamiento)."""
+    from app.services.security import reset_login_guard
+
+    reset_login_guard()
+    yield
+    reset_login_guard()
+
+
+@pytest.fixture(autouse=True)
 def _sin_impresora(monkeypatch):
     """Los tests nunca tocan la impresora física: get_printer siempre 'falla'.
 

@@ -146,6 +146,72 @@ def test_at_9_3_reimpresion_identica_mas_leyenda(db, turno, make_producto):
     assert v.estado == "pagada" and v.total == D("116.00")
 
 
+def _fake_pago(estado, medio="tarjeta_point", **kw):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        estado=estado,
+        medio=medio,
+        monto=D("20.00"),
+        recibido=kw.get("recibido"),
+        cambio=kw.get("cambio"),
+        mp_order_id=kw.get("order", "ORD0000QAX2A1RM"),
+        mp_payment_type=kw.get("tipo"),
+        mp_card_brand=kw.get("marca"),
+        mp_card_last4=kw.get("last4"),
+    )
+
+
+def _fake_venta(pagos):
+    from types import SimpleNamespace
+
+    ln = SimpleNamespace(
+        cantidad=D("1"),
+        descripcion="Item",
+        importe=D("20.00"),
+        descuento=D("0"),
+        divisa="MXN",
+        precio_divisa=None,
+        tipo_cambio=None,
+        precio_unit=D("20.00"),
+    )
+    return SimpleNamespace(
+        folio="V-000011",
+        cerrado_en=datetime(2026, 6, 19, tzinfo=timezone.utc),
+        creado_en=datetime(2026, 6, 19, tzinfo=timezone.utc),
+        lineas=[ln],
+        subtotal=D("17.24"),
+        descuento_total=D("0"),
+        iva_total=D("2.76"),
+        total=D("20.00"),
+        pagos=pagos,
+    )
+
+
+def test_ticket_solo_muestra_pagos_aprobados():
+    # Una venta con tarjeta puede dejar varios intentos cancelados; el ticket
+    # debe mostrar SOLO el aprobado (no 5 líneas "Pago: Tarjeta").
+    pagos = [
+        _fake_pago("cancelado", order="ORDc1S3MM8JFR"),
+        _fake_pago("cancelado", order="ORDc2J751WSGX"),
+        _fake_pago("aprobado", tipo="credit_card", marca="visa", last4="3610"),
+    ]
+    txt = printing.construir_ticket_texto(
+        _fake_venta(pagos), cajero_nombre="Ana", business_name="X"
+    )
+    assert txt.count("Pago: Tarjeta") == 1
+    assert "S3MM8JFR" not in txt and "J751WSGX" not in txt
+
+
+def test_ticket_tarjeta_muestra_tipo_marca_y_ultimos4():
+    pagos = [_fake_pago("aprobado", tipo="credit_card", marca="visa", last4="3610")]
+    txt = printing.construir_ticket_texto(
+        _fake_venta(pagos), cajero_nombre="Ana", business_name="X"
+    )
+    assert "Pago: Tarjeta crédito" in txt
+    assert "VISA" in txt and "****3610" in txt
+
+
 def test_http_reimpresion_busca_y_muestra(op_client, make_producto, db, turno):
     v = _venta_pagada(db, turno, make_producto)
     r = op_client.post("/reimpresion/buscar", data={"folio": v.folio})

@@ -24,8 +24,30 @@
 
   {% elif state == 'aprobado' %}
     <div class="ok">Pago aprobado.</div>
-    <a class="btn btn-primary" style="width:100%;text-align:center;"
-       href="/reimpresion?folio={{ venta.folio }}">Imprimir ticket</a>
+    {# Igual que el efectivo: el ticket se imprime solo. Si la impresora falló,
+       NO redirige (para no perder de vista el botón de reimprimir). #}
+    {% if print_ok %}
+      <div class="ok">🖨️ Ticket impreso.</div>
+    {% elif print_ok is not none %}
+      <div class="warn" role="alert">⚠️ Impresora no disponible ({{ print_error }}).
+        El ticket quedó disponible para reimprimir.</div>
+    {% endif %}
+    <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+      <a class="btn btn-primary" href="/venta" style="flex:1;text-align:center;">Nueva venta</a>
+      <a class="btn" href="/reimpresion?folio={{ venta.folio }}" style="flex:1;text-align:center;">Reimprimir</a>
+    </div>
+    {% if print_ok %}
+    <p class="muted" style="text-align:center;">Nueva venta en <span id="seg">6</span> s…</p>
+    <script>
+      (function () {
+        var n = 6, el = document.getElementById('seg');
+        var t = setInterval(function () {
+          n -= 1; if (el) el.textContent = n;
+          if (n <= 0) { clearInterval(t); window.location.href = '/venta'; }
+        }, 1000);
+      })();
+    </script>
+    {% endif %}
 
   {% elif state == 'rechazado' %}
     <div class="err">Pago rechazado. Reintenta o cobra en efectivo.</div>

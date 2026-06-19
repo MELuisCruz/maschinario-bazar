@@ -39,6 +39,16 @@ def test_at_1_4_cajero_inactivo_rechaza(db):
     assert turnos.authenticate(db, "off", "1111") is None
 
 
+def test_login_bloqueo_tras_intentos_fallidos(client, cajero):
+    """5 PIN incorrectos activan el bloqueo temporal (anti fuerza bruta)."""
+    for _ in range(5):
+        r = client.post("/login", data={"usuario": "caja1", "pin": "0000"})
+        assert r.status_code == 401
+    # El siguiente intento queda bloqueado AUN con el PIN correcto (429).
+    r = client.post("/login", data={"usuario": "caja1", "pin": "2468"})
+    assert r.status_code == 429
+
+
 def test_login_flow_http(client, cajero):
     # PIN incorrecto → 401, sin sesión.
     bad = client.post("/login", data={"usuario": "caja1", "pin": "0000"})

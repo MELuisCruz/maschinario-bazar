@@ -5,23 +5,32 @@ Flujo: /login (usuario + PIN) → /turno (abrir o reanudar) → /venta.
 
 from __future__ import annotations
 
+import logging
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db import get_session
 from app.deps import require_cajero, templates
 from app.models import Cajero
-from app.services import turnos
+from app.services import security, turnos
 
 router = APIRouter(tags=["auth"])
+log = logging.getLogger("pos.auth")
 
 
 @router.get("/login", response_class=HTMLResponse)
 def login_form(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "login.html", {"error": None})
+
+
+def _login_error(request: Request, mensaje: str, status: int) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request, "login.html", {"error": mensaje}, status_code=status
+    )
 
 
 @router.post("/login")
@@ -31,15 +40,32 @@ def login_submit(
     pin: str = Form(...),
     session: Session = Depends(get_session),
 ):
-    cajero = turnos.authenticate(session, usuario.strip(), pin)
+    usuario = usuario.strip()
+    settings = get_settings()
+
+    # Anti fuerza bruta: si el usuario está bloqueado, no se evalúa el PIN.
+    restante = security.login_segundos_bloqueo(usuario)
+    if restante > 0:
+        log.warning("login bloqueado usuario=%s (%ss restantes)", usuario, restante)
+        return _login_error(
+            request,
+            f"Demasiados intentos. Espera {restante} s e inténtalo de nuevo.",
+            429,
+        )
+
+    cajero = turnos.authenticate(session, usuario, pin)
     if cajero is None:
         # PIN/usuario inválido o cajero inactivo (AT-1.2, AT-1.4). No se crea turno.
-        return templates.TemplateResponse(
-            request,
-            "login.html",
-            {"error": "Usuario o PIN incorrecto."},
-            status_code=401,
+        security.registrar_login_fallido(
+            usuario,
+            max_intentos=settings.login_max_intentos,
+            bloqueo_seg=settings.login_bloqueo_seg,
         )
+        log.warning("login fallido usuario=%s", usuario)
+        return _login_error(request, "Usuario o PIN incorrecto.", 401)
+
+    security.registrar_login_exitoso(usuario)
+    log.info("login ok usuario=%s id=%s", usuario, cajero.id)
     request.session["cajero_id"] = cajero.id
     request.session.pop("turno_id", None)
     return RedirectResponse("/turno", status_code=303)

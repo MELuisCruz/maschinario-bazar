@@ -6,6 +6,7 @@ domicilio, teléfono, mensaje de pie). Persiste en la tabla `configuracion`.
 
 from __future__ import annotations
 
+import logging
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -19,6 +20,7 @@ from app.services import configuracion as cfg_svc
 from app.services import divisas
 
 router = APIRouter(prefix="/configuracion", tags=["configuracion"])
+log = logging.getLogger("pos.configuracion")
 
 
 def _render(request: Request, session: Session, cajero: Cajero, msg=None, error=None):
@@ -101,11 +103,14 @@ def fx_actualizar(
             f"USD={api['USD']}, EUR={api['EUR']} ({api.get('fecha', '')})."
         )
         return _render(request, session, cajero, msg=msg)
-    except Exception as exc:  # sin internet / API caída
+    except Exception:  # sin internet / API caída
         session.rollback()
+        # Se registra el detalle en el servidor; al usuario un mensaje genérico
+        # (no se filtran detalles internos al cliente).
+        log.exception("Fallo al consultar la API de tipo de cambio")
         return _render(
             request,
             session,
             cajero,
-            error=f"No se pudo consultar la API de tipo de cambio: {exc}",
+            error="No se pudo consultar la API de tipo de cambio. Intenta más tarde.",
         )

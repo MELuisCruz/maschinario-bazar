@@ -53,6 +53,11 @@ class Pago(Base):
     )
     mp_order_id: Mapped[str | None] = mapped_column(Text)  # id de la order en MP
     mp_idempotency: Mapped[str | None] = mapped_column(Text)  # llave de idempotencia
+    # Datos de la tarjeta (de la order aprobada) para el ticket: tipo (crédito/
+    # débito), marca (visa/master/…) y últimos 4 dígitos.
+    mp_payment_type: Mapped[str | None] = mapped_column(Text)
+    mp_card_brand: Mapped[str | None] = mapped_column(Text)
+    mp_card_last4: Mapped[str | None] = mapped_column(Text)
     creado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

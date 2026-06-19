@@ -133,8 +133,10 @@ def main() -> None:
 
         print("✅ Seed completado.")
         if creado:
-            print(f"   Admin creado: usuario='{admin.usuario}' · PIN='{pin}'")
-            print("   ⚠️  Cambia este PIN antes de operar en producción.")
+            # No se imprime el PIN (credencial): entra con el que definiste en
+            # SEED_ADMIN_PIN. Mostrarlo aquí lo filtraría a stdout/logs.
+            print(f"   Admin creado: usuario='{admin.usuario}'.")
+            print("   El PIN es el de SEED_ADMIN_PIN; cámbialo antes de producción.")
         else:
             print(f"   Admin ya existía: usuario='{admin.usuario}' (sin cambios).")
         if not args.no_demo:

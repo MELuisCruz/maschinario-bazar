@@ -6,6 +6,7 @@ a la API de Orders (ver router/servicio de tarjeta).
 
 from __future__ import annotations
 
+import logging
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -23,6 +24,7 @@ from app.services import mp_point, printing, ventas
 from app.services.mp_point import MPClient
 
 router = APIRouter(prefix="/cobro", tags=["cobro"])
+log = logging.getLogger("pos.cobro")
 
 
 def _venta_activa(session: Session, turno: Turno):
@@ -107,12 +109,26 @@ def cobrar_efectivo(
 
 
 def _panel(
-    request: Request, venta, *, state: str, pago=None, error=None
+    request: Request,
+    venta,
+    *,
+    state: str,
+    pago=None,
+    error=None,
+    print_ok=None,
+    print_error=None,
 ) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "partials/_tarjeta_panel.html",
-        {"venta": venta, "state": state, "pago": pago, "error": error},
+        {
+            "venta": venta,
+            "state": state,
+            "pago": pago,
+            "error": error,
+            "print_ok": print_ok,
+            "print_error": print_error,
+        },
     )
 
 
@@ -150,8 +166,14 @@ def tarjeta_iniciar(
         )
     except mp_point.MPError as exc:
         session.rollback()
+        # Detalle al log del servidor; al cajero un mensaje accionable y sin
+        # filtrar internals.
+        log.warning("Error de Mercado Pago al iniciar cobro: %s", exc)
         return _panel(
-            request, venta, state="error", error=f"Error de Mercado Pago: {exc}"
+            request,
+            venta,
+            state="error",
+            error="No se pudo iniciar el cobro con tarjeta. Reintenta o usa efectivo.",
         )
     except cobro_svc.VentaNoCobrable:
         session.rollback()
@@ -172,7 +194,7 @@ def tarjeta_estado(
     ctx: tuple[Cajero, Turno] = Depends(require_turno),
     client: MPClient = Depends(get_mp_client),
 ):
-    _, turno = ctx
+    cajero, turno = ctx
     venta = _venta_activa(session, turno)
     pago = session.scalars(
         select(Pago)
@@ -188,6 +210,24 @@ def tarjeta_estado(
         # Ambigüedad/sin red: el pago permanece pendiente (AT-4.4); seguir sondeando.
         return _panel(request, venta, state="waiting", pago=pago)
     session.commit()
+    if estado == "aprobado":
+        # Igual que el efectivo: imprime el ticket automáticamente (no rompe si
+        # falla; queda para reimprimir — AT-9.2).
+        res = printing.imprimir_ticket(
+            venta,
+            cajero_nombre=cajero.nombre,
+            pagos=venta.pagos,
+            settings=get_settings(),
+            **cfg_svc.ticket_kwargs(session),
+        )
+        return _panel(
+            request,
+            venta,
+            state=estado,
+            pago=pago,
+            print_ok=res.ok,
+            print_error=res.error,
+        )
     return _panel(request, venta, state=estado, pago=pago)
 
 

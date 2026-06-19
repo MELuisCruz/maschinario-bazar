@@ -69,6 +69,25 @@ def estado_desde_order(order: dict) -> str:
     return "pendiente"
 
 
+def datos_tarjeta_desde_order(order: dict) -> dict:
+    """Extrae tipo de tarjeta (crédito/débito), marca y últimos 4 de la order.
+
+    La API de Orders devuelve esto en `transactions.payments[0].payment_method`
+    (`type`: credit_card/debit_card, `id`: visa/master/…) y `.card.last_digits`.
+    Devuelve {} si no hay datos (p. ej. order aún sin pago resuelto).
+    """
+    pays = (order.get("transactions") or {}).get("payments") or []
+    if not pays:
+        return {}
+    pm = pays[0].get("payment_method") or {}
+    card = pays[0].get("card") or {}
+    return {
+        "tipo": pm.get("type") or None,  # credit_card / debit_card
+        "marca": pm.get("id") or None,  # visa / master / amex / ...
+        "last4": card.get("last_digits") or None,
+    }
+
+
 def _extract_code(data: dict) -> str:
     if not isinstance(data, dict):
         return ""
@@ -150,10 +169,6 @@ class MPClient:
             "transactions": {"payments": [{"amount": str(q2(amount))}]},
             "config": {
                 "point": {"terminal_id": terminal_id, "print_on_terminal": "no_ticket"},
-                "payment_method": {
-                    "default_installments": 1,
-                    "installments_cost": "seller",
-                },
             },
             "description": description or f"Venta {external_reference}",
         }
@@ -165,7 +180,16 @@ class MPClient:
         return self._request("GET", f"/v1/orders/{order_id}")
 
     def cancel_order(self, order_id: str) -> dict:
-        return self._request("POST", f"/v1/orders/{order_id}/cancel")
+        # cancel/refund también exigen X-Idempotency-Key (MP 400 empty_required_header).
+        return self._request(
+            "POST",
+            f"/v1/orders/{order_id}/cancel",
+            idempotency_key=new_idempotency_key(),
+        )
 
     def refund_order(self, order_id: str) -> dict:
-        return self._request("POST", f"/v1/orders/{order_id}/refund")
+        return self._request(
+            "POST",
+            f"/v1/orders/{order_id}/refund",
+            idempotency_key=new_idempotency_key(),
+        )

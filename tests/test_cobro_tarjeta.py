@@ -217,6 +217,56 @@ def test_client_409_already_queued_mapea_excepcion():
         )
 
 
+def test_conciliar_guarda_datos_de_tarjeta(db, turno, make_producto):
+    """Al aprobar, persiste tipo (crédito/débito), marca y últimos 4 para el ticket."""
+    v = _venta_tarjeta(db, turno, make_producto)
+
+    class FakeCard(FakeMP):
+        def get_order(self, order_id):
+            return {
+                "id": order_id,
+                "status": "processed",
+                "transactions": {
+                    "payments": [
+                        {
+                            "id": "PAY1",
+                            "status": "approved",
+                            "payment_method": {
+                                "id": "visa",
+                                "type": "credit_card",
+                                "installments": 1,
+                            },
+                            "card": {"last_digits": "3610"},
+                        }
+                    ]
+                },
+            }
+
+    fake = FakeCard()
+    pago = cobro.iniciar_tarjeta(db, v, fake, "TERM01")
+    estado = cobro.conciliar_tarjeta(db, pago, fake)
+    db.commit()
+    assert estado == "aprobado"
+    assert pago.mp_payment_type == "credit_card"
+    assert pago.mp_card_brand == "visa"
+    assert pago.mp_card_last4 == "3610"
+
+
+def test_cancel_y_refund_envian_idempotency_key():
+    """cancel/refund exigen X-Idempotency-Key (MP 400 empty_required_header)."""
+    vistos = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        vistos.append(request.headers.get("X-Idempotency-Key"))
+        return httpx.Response(200, json={"id": "ORD9", "status": "canceled"})
+
+    http = httpx.Client(transport=httpx.MockTransport(handler))
+    c = MPClient("tok", base_url="https://mp.test", http=http)
+    c.cancel_order("ORD9")
+    c.refund_order("ORD9")
+    assert len(vistos) == 2 and all(vistos)  # ambas mandaron la llave
+
+
 def test_client_offline_connecterror():
     def handler(request):
         raise httpx.ConnectError("no route")

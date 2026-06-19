@@ -45,6 +45,15 @@ def _fmt_fecha(dt: datetime, fecha_formato: str, tz_offset: int) -> str:
 # (HARDWARE_SETUP §1.5).
 TICKET_CODEPAGE = "CP850"
 
+# Tipo de tarjeta (de la order de MP) → etiqueta legible para el ticket.
+_ETIQUETA_TARJETA = {"credit_card": "crédito", "debit_card": "débito"}
+
+
+def _es_pago_aprobado(p) -> bool:
+    """True si el pago está aprobado (tolerante a enum o string)."""
+    e = getattr(p, "estado", None)
+    return getattr(e, "value", e) == "aprobado"
+
 
 def _sep() -> str:
     return "-" * WIDTH
@@ -89,6 +98,9 @@ def construir_ticket_texto(
     el admin (services/configuracion.py); los textos vacíos se omiten.
     """
     pagos = list(pagos if pagos is not None else getattr(venta, "pagos", []))
+    # En el ticket solo aparecen los pagos efectivamente aprobados: un cobro con
+    # tarjeta puede dejar varios intentos cancelados/pendientes en la misma venta.
+    pagos = [p for p in pagos if _es_pago_aprobado(p)]
     fecha = venta.cerrado_en or venta.creado_en
     lineas: list[str] = []
     lineas.append(_center(business_name.upper()))
@@ -142,8 +154,23 @@ def construir_ticket_texto(
             if p.cambio is not None:
                 lineas.append(_lr("Cambio:", _money(p.cambio)))
         else:
+            # Forma de pago con tarjeta: tipo (crédito/débito) + importe, y una
+            # sublínea con marca, últimos 4 y folio de aprobación (trazabilidad).
+            tipo = _ETIQUETA_TARJETA.get(getattr(p, "mp_payment_type", None) or "", "")
+            etiqueta = ("Pago: Tarjeta " + tipo).rstrip()
+            lineas.append(_lr(etiqueta, _money(p.monto)))
+            detalle = []
+            marca = getattr(p, "mp_card_brand", None)
+            last4 = getattr(p, "mp_card_last4", None)
+            if marca:
+                detalle.append(str(marca).upper())
+            if last4:
+                detalle.append(f"****{last4}")
             ref = (p.mp_order_id or "")[-8:]
-            lineas.append(_lr("Pago: Tarjeta Point", f"Aprob. {ref}"))
+            if ref:
+                detalle.append(f"Aprob. {ref}")
+            if detalle:
+                lineas.append("  " + "  ".join(detalle))
     lineas.append(_sep())
     lineas.append(_center(pie.strip() or "¡Gracias por su compra!"))
     if reimpresion:

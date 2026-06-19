@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Hook anti-secretos (defensa preventiva, no destructiva).
+# Bloquea commitear archivos .env reales y patrones que parezcan secretos.
+# Instalar (una vez):  git config core.hooksPath scripts/git-hooks
+set -euo pipefail
+
+fail=0
+
+# 1) Nunca commitear archivos .env (la plantilla .env.example sí se permite).
+envs=$(git diff --cached --name-only | grep -E '(^|/)\.env($|\.[^/]*)?$' | grep -v '\.env\.example$' || true)
+if [ -n "$envs" ]; then
+  echo "✘ Intento de commitear un archivo .env (puede contener secretos):"
+  echo "$envs"
+  fail=1
+fi
+
+# 2) Patrones de secretos en el contenido en stage (token MP, llaves privadas,
+#    asignaciones SECRET/TOKEN/PASSWORD/API_KEY con valor largo).
+patron='APP_USR-[0-9A-Za-z]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(SECRET|TOKEN|PASSWORD|API_KEY)[A-Za-z_]*[[:space:]]*[=:][[:space:]]*["'"'"']?[A-Za-z0-9_/+.-]{16,}'
+hits=$(git diff --cached -U0 --no-color | grep -E '^\+' | grep -nE "$patron" || true)
+if [ -n "$hits" ]; then
+  echo "✘ Posible secreto en el contenido en stage. Revísalo antes de commitear:"
+  echo "$hits"
+  fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo ""
+  echo "Commit abortado por el hook anti-secretos. Si es un falso positivo,"
+  echo "puedes saltarlo con:  git commit --no-verify"
+  exit 1
+fi
