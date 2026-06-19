@@ -14,6 +14,12 @@ from decimal import Decimal
 
 WIDTH = 48  # columnas en Font A (~72 mm)
 
+# Codepage de la impresora (Rongta RP850). CP850 cubre minúsculas y MAYÚSCULAS
+# acentuadas (ÁÉÍÓÚ áéíóú), ñ/Ñ y $; el default CP437 no trae las mayúsculas
+# acentuadas. Si en otra impresora salieran raras, probar "CP858" o "CP437"
+# (HARDWARE_SETUP §1.5).
+TICKET_CODEPAGE = "CP850"
+
 
 def _sep() -> str:
     return "-" * WIDTH
@@ -148,6 +154,7 @@ def imprimir_ticket(
     factory = printer_factory or get_printer
     try:
         printer = factory(settings)
+        printer.charcode(TICKET_CODEPAGE)  # mayúsculas acentuadas (ÁÉÍÓÚ)
         printer.text(texto + "\n")
         printer.cut()  # GS V — corte; sin ESC p (no hay cajón)
         close = getattr(printer, "close", None)

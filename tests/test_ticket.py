@@ -30,6 +30,10 @@ class FakePrinter:
     def __init__(self):
         self.textos = []
         self.cortes = 0
+        self.codepage = None
+
+    def charcode(self, code):
+        self.codepage = code
 
     def text(self, t):
         self.textos.append(t)
@@ -87,6 +91,7 @@ def test_imprime_y_verifica_comandos(db, turno, make_producto):
     )
     assert res.ok is True
     assert fake.cortes == 1  # se emitió el corte (GS V)
+    assert fake.codepage == "CP850"  # codepage fijo para acentos (ÁÉÍÓÚ)
     assert any("TOTAL:" in t for t in fake.textos)
 
 
