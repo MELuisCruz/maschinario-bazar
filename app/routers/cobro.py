@@ -75,6 +75,10 @@ def cobrar_efectivo(
             },
             status_code=400,
         )
+    except cobro_svc.VentaNoCobrable:
+        # Venta vacía o ya cerrada: no se puede cobrar; volver a Venta sin romper.
+        session.rollback()
+        return RedirectResponse("/venta", status_code=303)
     session.commit()
     # Efectivo: imprime el ticket automáticamente (no rompe la venta si falla;
     # queda disponible para reimpresión por folio — AT-9.2).

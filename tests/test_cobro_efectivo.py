@@ -102,3 +102,12 @@ def test_http_cobro_efectivo(op_client, make_producto):
     r = op_client.post("/cobro/efectivo", data={"recibido": "50"})
     assert r.status_code == 200
     assert "cobrada" in r.text.lower()
+
+
+def test_http_cobro_venta_vacia_no_rompe(op_client):
+    # Cobrar una venta sin líneas NO debe dar 500; redirige a /venta (robustez).
+    r = op_client.post(
+        "/cobro/efectivo", data={"recibido": "50"}, follow_redirects=False
+    )
+    assert r.status_code == 303
+    assert r.headers["location"] == "/venta"
