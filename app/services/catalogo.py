@@ -152,7 +152,18 @@ def importar_csv(
             if precio < 0:
                 raise ValueError("precio negativo")
             iva = Decimal((row.get("iva_tasa") or "0.160").strip() or "0.160")
-            existencia = Decimal((row.get("existencia") or "0").strip() or "0")
+            # Existencia OPCIONAL: si la columna falta/está vacía, los items
+            # nuevos arrancan en 1 y los existentes NO cambian su stock.
+            existencia_raw = (row.get("existencia") or "").strip()
+            if existencia_raw:
+                try:
+                    existencia = Decimal(existencia_raw)
+                except InvalidOperation:
+                    raise ValueError("existencia inválida")
+                if existencia < 0:
+                    raise ValueError("existencia negativa")
+            else:
+                existencia = None  # se decide según alta/actualización
             controla = (row.get("controla_stock") or "true").strip().lower() not in (
                 "false",
                 "0",
@@ -160,11 +171,14 @@ def importar_csv(
             )
             sku = (row.get("sku") or "").strip() or None
 
+            # Upsert por código de barras O por SKU (soporta items solo-SKU).
             existente = None
             if codigo:
                 existente = session.scalar(
                     select(Producto).where(Producto.codigo_barras == codigo)
                 )
+            if existente is None and sku:
+                existente = session.scalar(select(Producto).where(Producto.sku == sku))
             if existente is None:
                 crear_producto(
                     session,
@@ -173,7 +187,10 @@ def importar_csv(
                     codigo_barras=codigo,
                     sku=sku,
                     iva_tasa=iva,
-                    existencia_inicial=existencia,
+                    # Default 1 para items nuevos sin cantidad en el CSV.
+                    existencia_inicial=(
+                        existencia if existencia is not None else Decimal("1")
+                    ),
                     controla_stock=controla,
                     cajero_id=cajero_id,
                 )
@@ -185,17 +202,20 @@ def importar_csv(
                 existente.controla_stock = controla
                 if sku:
                     existente.sku = sku
-                # Ajuste de existencia vía bitácora (movimiento 'import').
-                delta = existencia - Decimal(existente.existencia)
-                if delta != 0:
-                    stock.registrar_movimiento(
-                        session,
-                        existente,
-                        "import",
-                        delta,
-                        referencia="import",
-                        cajero_id=cajero_id,
-                    )
+                if codigo and not existente.codigo_barras:
+                    existente.codigo_barras = codigo
+                # Ajuste de existencia solo si el CSV trae la cantidad.
+                if existencia is not None:
+                    delta = existencia - Decimal(existente.existencia)
+                    if delta != 0:
+                        stock.registrar_movimiento(
+                            session,
+                            existente,
+                            "import",
+                            delta,
+                            referencia="import",
+                            cajero_id=cajero_id,
+                        )
                 res.actualizados += 1
         except Exception as exc:  # fila inválida: reporta y continúa
             res.errores.append((i, str(exc)))

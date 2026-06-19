@@ -66,6 +66,49 @@ def test_import_csv_actualiza_existente(db):
     assert p.existencia == D("8")  # ajuste vía bitácora
 
 
+def test_import_csv_existencia_opcional_default_1(db):
+    res = cat.importar_csv(db, "codigo_barras,nombre,precio\nNEW1,Item nuevo,9.00\n")
+    db.commit()
+    assert res.creados == 1
+    p = db.query(Producto).filter_by(codigo_barras="NEW1").one()
+    assert p.existencia == D("1")  # default 1 para items nuevos sin cantidad
+
+
+def test_import_csv_update_sin_existencia_conserva_stock(db):
+    cat.crear_producto(
+        db, nombre="X", precio=D("5"), codigo_barras="UPD1", existencia_inicial=D("7")
+    )
+    db.commit()
+    res = cat.importar_csv(db, "codigo_barras,nombre,precio\nUPD1,X2,6.00\n")
+    db.commit()
+    assert res.actualizados == 1
+    p = db.query(Producto).filter_by(codigo_barras="UPD1").one()
+    assert p.nombre == "X2"
+    assert p.existencia == D("7")  # sin columna existencia: no toca el stock
+
+
+def test_import_csv_upsert_por_sku(db):
+    cat.crear_producto(
+        db, nombre="SoloSku", precio=D("5"), sku="SK-1", existencia_inicial=D("3")
+    )
+    db.commit()
+    res = cat.importar_csv(db, "sku,nombre,precio,existencia\nSK-1,SoloSku2,8.00,10\n")
+    db.commit()
+    assert res.actualizados == 1  # actualiza por SKU, no crea duplicado
+    p = db.query(Producto).filter_by(sku="SK-1").one()
+    assert p.nombre == "SoloSku2" and p.existencia == D("10")
+
+
+def test_http_alta_con_sku_sin_codigo_barras(op_client, db):
+    r = op_client.post(
+        "/catalogo/alta", data={"nombre": "SoloSKU", "precio": "5.00", "sku": "MAN-1"}
+    )
+    assert r.status_code == 200 and "creado" in r.text
+    db.expire_all()
+    p = db.query(Producto).filter_by(sku="MAN-1").one()
+    assert p.codigo_barras is None and p.existencia == D("1")
+
+
 def test_http_alta_y_duplicado(op_client):
     r = op_client.post(
         "/catalogo/alta",

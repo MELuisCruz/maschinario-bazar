@@ -98,7 +98,7 @@ def alta(
     codigo_barras: str = Form(""),
     sku: str = Form(""),
     iva_tasa: str = Form("0.160"),
-    existencia: str = Form("0"),
+    existencia: str = Form("1"),  # default 1 (consistente con el import CSV)
     controla_stock: str = Form("true"),
     session: Session = Depends(get_session),
     cajero: Cajero = Depends(require_admin),  # solo admin actualiza el catálogo

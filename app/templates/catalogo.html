@@ -65,17 +65,22 @@
     <form method="post" action="/catalogo/alta" class="panel">
       <strong>Alta de producto</strong>
       <label>Nombre</label><input name="nombre" required />
-      <label>Código de barras (escaneable)</label>
+      <label>SKU interno <span class="muted">(escaneable; úsalo si no hay código de fábrica)</span></label>
+      <input name="sku" class="mono" autocomplete="off" />
+      <label>Código de barras <span class="muted">(opcional, si el artículo trae uno)</span></label>
       <input id="scan-input" name="codigo_barras" autocomplete="off" />
       <label>Precio (con IVA)</label><input name="precio" class="mono" inputmode="decimal" required />
-      <label>Existencia inicial</label><input name="existencia" class="mono" inputmode="decimal" value="0" />
+      <label>Existencia inicial</label><input name="existencia" class="mono" inputmode="decimal" value="1" />
       <label><input type="checkbox" name="controla_stock" value="true" checked style="width:auto;"> Controla stock</label>
       <button class="btn btn-primary" type="submit" style="margin-top:.6rem;">Crear</button>
+      <p class="muted" style="margin-top:.4rem;">Necesita <b>SKU o código de barras</b> para poder escanearse.</p>
     </form>
 
     <form method="post" action="/catalogo/importar" enctype="multipart/form-data" class="panel">
       <strong>Importar CSV</strong>
-      <p class="muted">Columnas: codigo_barras, nombre, precio, iva_tasa, existencia, controla_stock, sku</p>
+      <p class="muted">Columnas: <b>nombre, precio</b> (requeridas); codigo_barras, sku,
+        iva_tasa, existencia, controla_stock (opcionales). <b>existencia</b> opcional:
+        items nuevos arrancan en 1; el upsert es por código de barras o SKU.</p>
       <input type="file" name="archivo" accept=".csv" required />
       <button class="btn" type="submit" style="margin-top:.6rem;">Importar</button>
     </form>
