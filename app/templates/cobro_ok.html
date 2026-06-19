@@ -6,7 +6,7 @@
   <div class="panel mono">
     <div style="display:flex;justify-content:space-between;"><span>Total</span><span>${{ '%.2f'|format(venta.total) }}</span></div>
     {% if pago %}
-    <div style="display:flex;justify-content:space-between;"><span>Medio</span><span>{{ pago.medio }}</span></div>
+    <div style="display:flex;justify-content:space-between;"><span>Medio</span><span>{{ etiqueta_medio(pago.medio) }}</span></div>
     {% if pago.medio == 'efectivo' %}
     <div style="display:flex;justify-content:space-between;"><span>Recibido</span><span>${{ '%.2f'|format(pago.recibido) }}</span></div>
     <div style="display:flex;justify-content:space-between;font-size:1.3rem;"><span>Cambio</span><span>${{ '%.2f'|format(pago.cambio) }}</span></div>

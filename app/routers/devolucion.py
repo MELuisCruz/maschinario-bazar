@@ -10,12 +10,16 @@ from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db import get_session
 from app.deps import get_mp_client, require_turno, templates
-from app.models import Cajero, Turno
-from app.services import devoluciones
+from app.models import Cajero, Pago, Turno
+from app.models.enums import etiqueta_medio
+from app.services import configuracion as cfg_svc
+from app.services import devoluciones, printing
 from app.services.mp_point import MPClient
 
 router = APIRouter(prefix="/devolucion", tags=["devolucion"])
@@ -133,6 +137,36 @@ async def confirmar(
             status_code=400,
         )
     session.commit()
+    # Ticket de devolución: imprime automáticamente (tolerante a fallos). El
+    # medio de reembolso = medio del pago aprobado de la venta original.
+    pago = session.scalar(
+        select(Pago).where(Pago.venta_id == venta.id, Pago.estado == "aprobado")
+    )
+    medio_label = etiqueta_medio(pago.medio) if pago else ""
+    cfg = cfg_svc.ticket_kwargs(session)
+    res = printing.imprimir_texto(
+        printing.construir_ticket_devolucion(
+            dev,
+            venta,
+            cajero_nombre=cajero.nombre,
+            business_name=cfg["business_name"],
+            evento=cfg["evento"],
+            domicilio=cfg["domicilio"],
+            telefono=cfg["telefono"],
+            medio=medio_label,
+            fecha_formato=cfg["fecha_formato"],
+            tz_offset=cfg["tz_offset"],
+        ),
+        settings=get_settings(),
+    )
     return templates.TemplateResponse(
-        request, "partials/_devolucion_ok.html", {"venta": venta, "dev": dev}
+        request,
+        "partials/_devolucion_ok.html",
+        {
+            "venta": venta,
+            "dev": dev,
+            "medio": medio_label,
+            "print_ok": res.ok,
+            "print_error": res.error,
+        },
     )

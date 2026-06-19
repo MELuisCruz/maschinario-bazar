@@ -45,6 +45,35 @@ class TipoMovimiento(str, enum.Enum):
     alta = "alta"
 
 
+# --- Etiquetas legibles para mostrar en UI/ticket (no usar el .value crudo) ---
+ESTADO_VENTA_LABEL = {
+    "abierta": "Abierta",
+    "pagada": "Pagada",
+    "cancelada": "Cancelada",
+    "devuelta_parcial": "Devuelta parcial",
+    "devuelta_total": "Devuelta total",
+}
+MEDIO_PAGO_LABEL = {
+    "efectivo": "Efectivo",
+    "tarjeta_point": "Tarjeta (Point)",
+}
+
+
+def _valor(v) -> str:
+    """Valor string de un enum o de un string (tolerante a ambos)."""
+    return getattr(v, "value", v) if v is not None else ""
+
+
+def etiqueta_estado(v) -> str:
+    s = _valor(v)
+    return ESTADO_VENTA_LABEL.get(s, s)
+
+
+def etiqueta_medio(v) -> str:
+    s = _valor(v)
+    return MEDIO_PAGO_LABEL.get(s, s)
+
+
 def _pg_enum(py_enum: type[enum.Enum], name: str) -> SAEnum:
     """ENUM nativo de Postgres que persiste el valor del miembro."""
     return SAEnum(

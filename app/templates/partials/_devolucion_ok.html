@@ -1,4 +1,4 @@
-{# Resultado de devolución. #}
+{# Resultado de devolución: imprime el comprobante y regresa a Venta. #}
 <div id="dev-lineas">
   <div class="ok" style="font-size:1.05rem;">
     Devolución registrada para <strong>{{ venta.folio }}</strong>.
@@ -6,9 +6,40 @@
   <div class="panel mono" style="margin-top:.6rem;">
     <div style="display:flex;justify-content:space-between;"><span>Monto devuelto</span>
       <span>${{ '%.2f'|format(dev.monto) }}</span></div>
+    {% if medio %}
+    <div style="display:flex;justify-content:space-between;"><span>Reembolso</span>
+      <span>{{ medio }}</span></div>
+    {% endif %}
     <div style="display:flex;justify-content:space-between;"><span>Estado venta</span>
-      <span>{{ venta.estado }}</span></div>
+      <span>{{ etiqueta_estado(venta.estado) }}</span></div>
   </div>
+
+  {% if print_ok %}
+    <div class="ok" style="margin-top:.6rem;">🖨️ Comprobante de devolución impreso.</div>
+  {% elif print_ok is defined %}
+    <div class="warn" role="alert" style="margin-top:.6rem;">⚠️ Impresora no disponible
+      ({{ print_error }}). La devolución quedó registrada.</div>
+  {% endif %}
+
   <p class="muted">Stock reintegrado. El reembolso en efectivo se entrega de caja;
      el de tarjeta se procesa vía Point.</p>
+
+  <div style="display:flex;gap:.5rem;margin-top:.4rem;">
+    <a class="btn btn-primary" href="/venta" style="flex:1;text-align:center;">Nueva venta</a>
+    <a class="btn" href="/devolucion" style="flex:1;text-align:center;">Otra devolución</a>
+  </div>
+
+  {% if print_ok %}
+  {# Comprobante impreso: regresa a Venta para la siguiente operación. #}
+  <p class="muted" style="text-align:center;">Volviendo a Venta en <span id="dev-seg">6</span> s…</p>
+  <script>
+    (function () {
+      var n = 6, el = document.getElementById('dev-seg');
+      var t = setInterval(function () {
+        n -= 1; if (el) el.textContent = n;
+        if (n <= 0) { clearInterval(t); window.location.href = '/venta'; }
+      }, 1000);
+    })();
+  </script>
+  {% endif %}
 </div>

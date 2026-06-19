@@ -22,7 +22,7 @@
   <div class="panel">
     <strong>Por medio de pago</strong>
     {% for medio, monto in rep.por_medio.items() %}
-    <div style="display:flex;justify-content:space-between;"><span>{{ medio }}</span><span class="mono">${{ '%.2f'|format(monto) }}</span></div>
+    <div style="display:flex;justify-content:space-between;"><span>{{ etiqueta_medio(medio) }}</span><span class="mono">${{ '%.2f'|format(monto) }}</span></div>
     {% else %}<div class="muted">Sin datos.</div>{% endfor %}
   </div>
   <div class="panel">
@@ -43,7 +43,7 @@
         <td class="mono">{{ v.folio }}</td>
         <td>{{ v.fecha.strftime('%Y-%m-%d %H:%M') }}</td>
         <td class="num mono">${{ '%.2f'|format(v.total) }}</td>
-        <td>{{ v.estado }}</td>
+        <td>{{ etiqueta_estado(v.estado) }}</td>
       </tr>
     {% else %}
       <tr><td colspan="4" class="empty">Sin ventas en el periodo.</td></tr>

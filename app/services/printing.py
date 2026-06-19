@@ -195,6 +195,11 @@ def imprimir_ticket(
         reimpresion=reimpresion,
         fecha_reimpresion=fecha_reimpresion,
     )
+    return imprimir_texto(texto, settings=settings, printer_factory=printer_factory)
+
+
+def imprimir_texto(texto, *, settings=None, printer_factory=None) -> PrintResult:
+    """Envía texto crudo a la impresora ESC/POS. Tolerante a fallos (AT-9.2)."""
     factory = printer_factory or get_printer
     try:
         printer = factory(settings)
@@ -207,3 +212,53 @@ def imprimir_ticket(
         return PrintResult(ok=True)
     except Exception as exc:  # impresora no disponible / papel / device
         return PrintResult(ok=False, error=str(exc))
+
+
+def construir_ticket_devolucion(
+    dev,
+    venta,
+    *,
+    cajero_nombre: str,
+    business_name: str,
+    evento: str = "",
+    domicilio: str = "",
+    telefono: str = "",
+    medio: str = "",
+    fecha_formato: str = FECHA_FORMATO_DEFAULT,
+    tz_offset: int = TZ_OFFSET_DEFAULT,
+) -> str:
+    """Comprobante de devolución (no es CFDI). Importes en MXN."""
+    desc_por_linea = {ln.id: ln.descripcion for ln in venta.lineas}
+    lineas: list[str] = []
+    lineas.append(_center(business_name.upper()))
+    if evento.strip():
+        lineas.append(_center(evento.strip()))
+    if domicilio.strip():
+        lineas.append(_center(domicilio.strip()))
+    if telefono.strip():
+        lineas.append(_center(f"Tel: {telefono.strip()}"))
+    lineas.append(_center("COMPROBANTE DE DEVOLUCIÓN"))
+    lineas.append(_center("(no es CFDI)"))
+    lineas.append(_sep())
+    lineas.append(f"Devolución: {dev.id}")
+    lineas.append(f"Venta orig.: {venta.folio}")
+    lineas.append(f"Fecha: {_fmt_fecha(dev.creado_en, fecha_formato, tz_offset)}")
+    lineas.append(f"Cajero: {cajero_nombre}")
+    lineas.append(_sep())
+    lineas.append(_lr("CANT DESCRIPCION", "IMPORTE"))
+    for dl in dev.lineas:
+        desc = desc_por_linea.get(dl.venta_linea_id, "Artículo")
+        cant = f"{Decimal(dl.cantidad):g}"
+        if len(desc) <= 30:
+            lineas.append(_lr(f"{cant} {desc}", _money(dl.importe)))
+        else:
+            for chunk in textwrap.wrap(desc, WIDTH):
+                lineas.append(chunk)
+            lineas.append(_lr(f"  {cant} x", _money(dl.importe)))
+    lineas.append(_sep())
+    lineas.append(_lr("TOTAL DEVUELTO:", _money(dev.monto)))
+    if medio:
+        lineas.append(_lr("Reembolso:", medio))
+    lineas.append(_sep())
+    lineas.append(_center("Comprobante de devolución"))
+    return "\n".join(lineas)

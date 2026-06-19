@@ -6,7 +6,7 @@
     <input type="hidden" name="folio" value="{{ venta.folio }}" />
     <div class="panel" style="margin-bottom:.6rem;">
       <strong>{{ venta.folio }}</strong> · {{ venta.creado_en.strftime("%Y-%m-%d %H:%M") }}
-      · estado: {{ venta.estado }}
+      · estado: {{ etiqueta_estado(venta.estado) }}
     </div>
     <table>
       <thead><tr><th>Descripción</th><th class="num">Vendido</th>

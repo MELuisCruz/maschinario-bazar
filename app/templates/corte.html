@@ -12,7 +12,7 @@
     <hr/>
     <strong>Ventas por medio de pago</strong>
     {% for medio, monto in res.por_medio.items() %}
-    <div style="display:flex;justify-content:space-between;"><span>{{ medio }}</span>
+    <div style="display:flex;justify-content:space-between;"><span>{{ etiqueta_medio(medio) }}</span>
       <span>${{ '%.2f'|format(monto) }}</span></div>
     {% else %}<div class="muted">Sin ventas.</div>{% endfor %}
     <hr/>

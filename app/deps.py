@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import get_session
 from app.models import Cajero, Turno
+from app.models.enums import etiqueta_estado, etiqueta_medio
 from app.services.cajeros import es_admin
 from app.services.mp_point import MPClient
 
@@ -24,6 +25,8 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 # Variables/funciones disponibles en todas las plantillas.
 templates.env.globals["business_name"] = get_settings().app_business_name
 templates.env.globals["es_admin"] = es_admin
+templates.env.globals["etiqueta_estado"] = etiqueta_estado
+templates.env.globals["etiqueta_medio"] = etiqueta_medio
 
 
 def get_mp_client() -> MPClient:
