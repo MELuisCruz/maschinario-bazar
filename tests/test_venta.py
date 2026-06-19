@@ -66,13 +66,35 @@ def test_at_2_5_descuento_global_recalcula(db, turno, make_producto):
     assert v.descuento_total == D("16.00")
 
 
-def test_at_2_6_stock_cero_avisa_sin_romper(db, turno, make_producto):
+def test_at_2_6_agotado_se_bloquea(db, turno, make_producto):
+    # Decisión del titular (18-jun-2026): vender sin existencia se BLOQUEA.
     make_producto(codigo="SIN", existencia="0", controla_stock=True)
     v = _venta(db, turno)
     res = ventas.agregar_por_codigo(db, v, "SIN")
     db.commit()
-    assert res.aviso is not None  # avisa
-    assert len(v.lineas) == 1  # pero la línea se agrega (no rompe)
+    assert res.bloqueado is True
+    assert res.aviso is not None
+    assert len(v.lineas) == 0  # NO se agrega (agotado)
+
+
+def test_no_excede_existencia_al_incrementar(db, turno, make_producto):
+    make_producto(codigo="LIM", existencia="2", controla_stock=True)
+    v = _venta(db, turno)
+    ventas.agregar_por_codigo(db, v, "LIM")  # 1
+    ventas.agregar_por_codigo(db, v, "LIM")  # 2 (== existencia)
+    res = ventas.agregar_por_codigo(db, v, "LIM")  # 3 > 2 → bloquea
+    db.commit()
+    assert res.bloqueado is True
+    assert v.lineas[0].cantidad == D("2")  # no pasó del stock
+
+
+def test_sin_control_de_stock_no_se_bloquea(db, turno, make_producto):
+    make_producto(codigo="LIBRE", existencia="0", controla_stock=False)
+    v = _venta(db, turno)
+    res = ventas.agregar_por_codigo(db, v, "LIBRE")
+    db.commit()
+    assert res.bloqueado is False
+    assert len(v.lineas) == 1  # sin control de stock: se vende sin tope
 
 
 def test_at_2_7_cancelar_no_afecta_stock_ni_caja(db, turno, make_producto):

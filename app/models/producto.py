@@ -26,6 +26,7 @@ class Producto(Base):
     __tablename__ = "productos"
     __table_args__ = (
         CheckConstraint("precio >= 0", name="ck_productos_precio_no_negativo"),
+        CheckConstraint("existencia >= 0", name="ck_productos_existencia_no_negativa"),
         Index("idx_productos_codigo", "codigo_barras"),
         Index("idx_productos_nombre", "nombre"),
     )

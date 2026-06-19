@@ -23,8 +23,9 @@ class ProductoNoEncontrado(Exception):
 
 @dataclass
 class AltaResultado:
-    linea: VentaLinea
-    aviso: str | None = None  # p. ej. stock 0 (AT-2.6), no bloquea
+    linea: VentaLinea | None
+    aviso: str | None = None  # mensaje (p. ej. bloqueo por falta de existencia)
+    bloqueado: bool = False  # True si NO se agregó por falta de stock
 
 
 def nuevo_folio(venta_id: int) -> str:
@@ -66,6 +67,22 @@ def agregar_por_codigo(session: Session, venta: Venta, codigo: str) -> AltaResul
         raise ProductoNoEncontrado(codigo)
 
     linea = next((ln for ln in venta.lineas if ln.producto_id == producto.id), None)
+    actual = Decimal(linea.cantidad) if linea is not None else Decimal("0")
+
+    # Bloqueo de sobreventa: no se permite agregar más unidades que la existencia
+    # disponible (decisión del titular 18-jun-2026: bloquear, no solo avisar).
+    # Los productos con controla_stock=False no tienen tope.
+    if producto.controla_stock and actual + 1 > Decimal(producto.existencia):
+        disp = max(Decimal("0"), Decimal(producto.existencia))
+        if disp <= 0:
+            aviso = f"«{producto.nombre}» agotado: no se agregó."
+        else:
+            aviso = (
+                f"«{producto.nombre}»: solo quedan {disp:g} "
+                f"(ya hay {actual:g} en la venta)."
+            )
+        return AltaResultado(linea=linea, aviso=aviso, bloqueado=True)
+
     if linea is None:
         linea = VentaLinea(
             venta_id=venta.id,
@@ -83,16 +100,17 @@ def agregar_por_codigo(session: Session, venta: Venta, codigo: str) -> AltaResul
 
     session.flush()
     recompute(session, venta)
-
-    aviso = None
-    if producto.controla_stock and producto.existencia <= 0:
-        aviso = f"«{producto.nombre}» sin existencia."  # AT-2.6, no bloquea
-    return AltaResultado(linea=linea, aviso=aviso)
+    return AltaResultado(linea=linea, aviso=None)
 
 
 def set_cantidad(session: Session, linea: VentaLinea, cantidad: Decimal) -> None:
     venta = session.get(Venta, linea.venta_id)
     cantidad = Decimal(cantidad)
+    if cantidad > 0:
+        # Tope por existencia: no permitir fijar más unidades que el stock.
+        producto = session.get(Producto, linea.producto_id)
+        if producto is not None and producto.controla_stock:
+            cantidad = min(cantidad, max(Decimal("0"), Decimal(producto.existencia)))
     if cantidad <= 0:
         venta.lineas.remove(linea)  # cantidad 0 = quitar línea
     else:
