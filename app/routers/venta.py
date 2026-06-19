@@ -77,6 +77,7 @@ def especial(
     referencia: str = Form(""),
     descripcion: str = Form(""),
     precio: str = Form("0"),
+    divisa: str = Form("MXN"),
     session: Session = Depends(get_session),
     ctx: tuple[Cajero, Turno] = Depends(require_turno),  # admin y cajero
 ):
@@ -84,9 +85,33 @@ def especial(
     venta = _venta_activa(session, turno)
     aviso = None
     try:
-        ventas.agregar_especial(session, venta, referencia, descripcion, _dec(precio))
+        ventas.agregar_especial(
+            session, venta, referencia, descripcion, _dec(precio), divisa
+        )
     except ValueError as exc:
         aviso = str(exc)
+    session.commit()
+    return _main(request, venta, aviso)
+
+
+@router.post("/linea/{linea_id}/divisa", response_class=HTMLResponse)
+def precio_divisa(
+    linea_id: int,
+    request: Request,
+    divisa: str = Form("MXN"),
+    monto: str = Form("0"),
+    session: Session = Depends(get_session),
+    ctx: tuple[Cajero, Turno] = Depends(require_turno),  # admin y cajero
+):
+    _, turno = ctx
+    linea = _linea_de_turno(session, linea_id, turno)
+    venta = _venta_activa(session, turno)
+    aviso = None
+    if linea is not None:
+        try:
+            ventas.set_precio_divisa(session, linea, divisa, _dec(monto))
+        except ValueError as exc:
+            aviso = str(exc)
     session.commit()
     return _main(request, venta, aviso)
 

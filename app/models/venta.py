@@ -99,7 +99,14 @@ class VentaLinea(Base):
     cantidad: Mapped[Decimal] = mapped_column(Numeric(12, 3), nullable=False)
     precio_unit: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), nullable=False
-    )  # snapshot precio
+    )  # snapshot precio EN MXN (usado para totales)
+    # Divisa de captura por línea. MXN por defecto; si es USD/EUR se guarda el
+    # monto en esa divisa y el tipo de cambio aplicado (precio_unit = monto*tc).
+    divisa: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default=text("'MXN'")
+    )
+    precio_divisa: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    tipo_cambio: Mapped[Decimal | None] = mapped_column(Numeric(14, 6))
     iva_tasa: Mapped[Decimal] = mapped_column(
         Numeric(4, 3), nullable=False
     )  # snapshot tasa

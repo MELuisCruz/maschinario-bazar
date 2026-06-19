@@ -112,6 +112,17 @@ def construir_ticket_texto(
             lineas.append(_lr(f"  {cant} x", _money(ln.importe)))
         if Decimal(ln.descuento) > 0:
             lineas.append(_lr("   (desc.)", f"-{_money(ln.descuento)}"))
+        # Si la línea se capturó en divisa, mostrar moneda original y tipo de cambio.
+        divisa = getattr(ln, "divisa", "MXN") or "MXN"
+        if (
+            divisa != "MXN"
+            and getattr(ln, "precio_divisa", None) is not None
+            and getattr(ln, "tipo_cambio", None) is not None
+        ):
+            lineas.append(
+                f"  {divisa} {Decimal(ln.precio_divisa):,.2f} @ "
+                f"{Decimal(ln.tipo_cambio):.4f} = {_money(ln.precio_unit)}"
+            )
     lineas.append(_sep())
     lineas.append(_lr("Subtotal:", _money(venta.subtotal)))
     if Decimal(venta.descuento_total) > 0:

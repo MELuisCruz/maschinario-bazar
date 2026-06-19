@@ -19,7 +19,15 @@
     <label>Descripción / notas <span class="muted">(interna, trazabilidad, máx. 100)</span></label>
     <input name="descripcion" maxlength="100" placeholder="detalle (no se imprime en el ticket)" />
     <label>Precio con IVA (16%)</label>
-    <input name="precio" class="mono" inputmode="decimal" required style="text-align:right;" />
+    <div style="display:flex;gap:.3rem;">
+      <select name="divisa" style="width:5rem;">
+        <option value="MXN" selected>MXN</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+      </select>
+      <input name="precio" class="mono" inputmode="decimal" required
+             style="text-align:right;flex:1;" placeholder="monto" />
+    </div>
     <button class="btn btn-primary" type="submit" style="margin-top:.4rem;">Agregar producto especial</button>
   </form>
 </details>

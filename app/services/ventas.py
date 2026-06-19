@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Producto, Venta, VentaLinea
+from app.services import divisas
 from app.services.money import LineaCalc, compute_totales, line_importe
 
 
@@ -89,7 +90,8 @@ def agregar_por_codigo(session: Session, venta: Venta, codigo: str) -> AltaResul
             producto_id=producto.id,
             descripcion=producto.nombre,  # snapshot (invariante DATA_MODEL §3)
             cantidad=Decimal("1"),
-            precio_unit=producto.precio,  # snapshot
+            precio_unit=producto.precio,  # snapshot (MXN)
+            divisa="MXN",
             iva_tasa=producto.iva_tasa,  # snapshot
             descuento=Decimal("0"),
             importe=line_importe(Decimal("1"), producto.precio),
@@ -137,12 +139,14 @@ def agregar_especial(
     referencia: str,
     descripcion: str,
     precio: Decimal,
+    divisa: str = "MXN",
 ) -> VentaLinea:
     """Agrega una línea de producto especial (precio ad-hoc, IVA 16% incluido).
 
     `referencia` (≤50) sale en el ticket como «Producto especial: ref»;
     `descripcion` (≤100) son notas internas de trazabilidad (no se imprimen).
-    Siempre crea una línea nueva (cada especial es distinto). No toca stock.
+    `precio` se captura en `divisa` (MXN/USD/EUR) y se convierte a MXN. Siempre
+    crea una línea nueva (cada especial es distinto). No toca stock.
     """
     referencia = (referencia or "").strip()[:REF_MAX]
     descripcion = (descripcion or "").strip()[:NOTAS_MAX]
@@ -151,6 +155,11 @@ def agregar_especial(
         raise ValueError("La referencia del producto especial es obligatoria.")
     if precio <= 0:
         raise ValueError("El precio del producto especial debe ser mayor a 0.")
+    try:
+        mxn, tc = divisas.convertir(session, precio, divisa)
+    except divisas.TipoCambioNoConfigurado as exc:
+        raise ValueError(str(exc)) from exc
+    es_mxn = (divisa or "MXN").upper() == "MXN"
     esp = get_or_create_especial(session)
     linea = VentaLinea(
         venta_id=venta.id,
@@ -158,15 +167,46 @@ def agregar_especial(
         descripcion=f"Producto especial: {referencia}",
         notas=descripcion or None,
         cantidad=Decimal("1"),
-        precio_unit=precio,
+        precio_unit=mxn,
+        divisa=(divisa or "MXN").upper(),
+        precio_divisa=None if es_mxn else precio,
+        tipo_cambio=None if es_mxn else tc,
         iva_tasa=Decimal("0.160"),
         descuento=Decimal("0"),
-        importe=line_importe(Decimal("1"), precio),
+        importe=line_importe(Decimal("1"), mxn),
     )
     venta.lineas.append(linea)
     session.flush()
     recompute(session, venta)
     return linea
+
+
+def set_precio_divisa(
+    session: Session, linea: VentaLinea, divisa: str, monto: Decimal
+) -> None:
+    """Re-precia una línea capturando el monto en MXN/USD/EUR; convierte a MXN.
+
+    El total de la venta siempre queda en MXN. Lanza ValueError si la divisa no
+    tiene tipo de cambio configurado o el monto no es válido.
+    """
+    monto = Decimal(monto)
+    if monto <= 0:
+        raise ValueError("El precio debe ser mayor a 0.")
+    divisa = (divisa or "MXN").upper()
+    try:
+        mxn, tc = divisas.convertir(session, monto, divisa)
+    except divisas.TipoCambioNoConfigurado as exc:
+        raise ValueError(str(exc)) from exc
+    linea.precio_unit = mxn
+    linea.divisa = divisa
+    if divisa == "MXN":
+        linea.precio_divisa = None
+        linea.tipo_cambio = None
+    else:
+        linea.precio_divisa = monto
+        linea.tipo_cambio = tc
+    session.flush()
+    recompute(session, linea.venta)
 
 
 def set_cantidad(session: Session, linea: VentaLinea, cantidad: Decimal) -> None:
