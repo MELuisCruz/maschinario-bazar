@@ -95,6 +95,35 @@ def test_imprime_y_verifica_comandos(db, turno, make_producto):
     assert any("TOTAL:" in t for t in fake.textos)
 
 
+def test_imprimir_texto_reintenta_y_se_recupera(monkeypatch):
+    # Simula que el USB vuelve al 2º intento (hueco de re-enganche de usbipd).
+    monkeypatch.setattr("app.services.printing.PRINT_ESPERA_S", 0)
+    intentos = {"n": 0}
+
+    def factory(_s):
+        intentos["n"] += 1
+        if intentos["n"] < 2:
+            raise RuntimeError("USB device not found")
+        return FakePrinter()
+
+    res = printing.imprimir_texto("hola", printer_factory=factory)
+    assert res.ok is True
+    assert intentos["n"] == 2  # falló 1, reintentó y funcionó
+
+
+def test_imprimir_texto_se_rinde_tras_intentos(monkeypatch):
+    monkeypatch.setattr("app.services.printing.PRINT_ESPERA_S", 0)
+    intentos = {"n": 0}
+
+    def factory(_s):
+        intentos["n"] += 1
+        raise RuntimeError("USB device not found")
+
+    res = printing.imprimir_texto("hola", printer_factory=factory)
+    assert res.ok is False and "not found" in res.error
+    assert intentos["n"] == printing.PRINT_INTENTOS  # agotó los reintentos
+
+
 def test_at_9_3_reimpresion_identica_mas_leyenda(db, turno, make_producto):
     v = _venta_pagada(db, turno, make_producto)
     base = printing.construir_ticket_texto(

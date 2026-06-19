@@ -9,11 +9,17 @@ reimpresión (AT-9.2). Sin cajón: no se emite `ESC p`.
 from __future__ import annotations
 
 import textwrap
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 WIDTH = 48  # columnas en Font A (~72 mm)
+
+# Reintentos de impresión ante caídas transitorias del USB (usbipd tarda en
+# re-enganchar). En tests se pone PRINT_ESPERA_S=0 para no demorar.
+PRINT_INTENTOS = 3
+PRINT_ESPERA_S = 1.2
 
 # Formato y zona horaria por defecto del timestamp (editables en Configuración).
 FECHA_FORMATO_DEFAULT = "%d-%m-%Y %H:%M"
@@ -199,19 +205,28 @@ def imprimir_ticket(
 
 
 def imprimir_texto(texto, *, settings=None, printer_factory=None) -> PrintResult:
-    """Envía texto crudo a la impresora ESC/POS. Tolerante a fallos (AT-9.2)."""
+    """Envía texto crudo a la impresora ESC/POS. Tolerante a fallos (AT-9.2).
+
+    Reintenta unas veces ante fallos transitorios de USB (el puente usbipd tarda
+    1-2 s en re-enganchar la impresora tras una suspensión/reconexión).
+    """
     factory = printer_factory or get_printer
-    try:
-        printer = factory(settings)
-        printer.charcode(TICKET_CODEPAGE)  # mayúsculas acentuadas (ÁÉÍÓÚ)
-        printer.text(texto + "\n")
-        printer.cut()  # GS V — corte; sin ESC p (no hay cajón)
-        close = getattr(printer, "close", None)
-        if callable(close):
-            close()
-        return PrintResult(ok=True)
-    except Exception as exc:  # impresora no disponible / papel / device
-        return PrintResult(ok=False, error=str(exc))
+    ultimo_error = None
+    for intento in range(PRINT_INTENTOS):
+        try:
+            printer = factory(settings)
+            printer.charcode(TICKET_CODEPAGE)  # mayúsculas acentuadas (ÁÉÍÓÚ)
+            printer.text(texto + "\n")
+            printer.cut()  # GS V — corte; sin ESC p (no hay cajón)
+            close = getattr(printer, "close", None)
+            if callable(close):
+                close()
+            return PrintResult(ok=True)
+        except Exception as exc:  # impresora no disponible / papel / device
+            ultimo_error = str(exc)
+            if intento < PRINT_INTENTOS - 1 and PRINT_ESPERA_S > 0:
+                time.sleep(PRINT_ESPERA_S)  # da tiempo a que usbipd re-enganche
+    return PrintResult(ok=False, error=ultimo_error)
 
 
 def construir_ticket_devolucion(

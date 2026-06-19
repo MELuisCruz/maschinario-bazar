@@ -60,6 +60,9 @@ def _sin_impresora(monkeypatch):
         raise RuntimeError("sin impresora (test)")
 
     monkeypatch.setattr("app.services.printing.get_printer", _no_printer)
+    monkeypatch.setattr(
+        "app.services.printing.PRINT_ESPERA_S", 0
+    )  # sin demora en tests
 
 
 @pytest.fixture
