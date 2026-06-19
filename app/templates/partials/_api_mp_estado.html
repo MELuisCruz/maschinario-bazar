@@ -1,0 +1,13 @@
+{# Testigo del estado del Access Token de Mercado Pago (verde/rojo). #}
+<div id="api-mp-estado">
+  {% if msg %}<div class="ok">{{ msg }}</div>{% endif %}
+  {% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+  {% set ok = mp.configurada and mp.ok %}
+  <p style="margin:.3rem 0;">
+    <span style="display:inline-block;width:.7rem;height:.7rem;border-radius:50%;
+      background:{{ '#1a8f3c' if ok else '#c0392b' }};margin-right:.45rem;vertical-align:middle;"></span>
+    <strong>{{ 'Disponible' if ok else ('No disponible' if mp.configurada else 'Sin token') }}</strong>
+    {% if mp.mascara %}<span class="mono muted">· {{ mp.mascara }}</span>{% endif %}
+  </p>
+  <p class="muted" style="margin:.2rem 0;">{{ mp.mensaje }}</p>
+</div>

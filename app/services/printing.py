@@ -304,3 +304,58 @@ def construir_ticket_devolucion(
     lineas.append(_sep())
     lineas.append(_center("Comprobante de devolución"))
     return "\n".join(lineas)
+
+
+def construir_ticket_rechazo(
+    venta,
+    *,
+    cajero_nombre: str,
+    business_name: str,
+    evento: str = "",
+    domicilio: str = "",
+    telefono: str = "",
+    pie: str = "",  # no se usa (compat con ticket_kwargs)
+    fecha_formato: str = FECHA_FORMATO_DEFAULT,
+    tz_offset: int = TZ_OFFSET_DEFAULT,
+    pago=None,
+) -> str:
+    """Comprobante informativo de **pago rechazado** (no es CFDI; no hubo cargo)."""
+    fecha = venta.cerrado_en or venta.creado_en
+    lineas: list[str] = []
+    lineas.append(_center(business_name.upper()))
+    if evento.strip():
+        lineas.append(_center(evento.strip()))
+    if domicilio.strip():
+        lineas.append(_center(domicilio.strip()))
+    if telefono.strip():
+        lineas.append(_center(f"Tel: {telefono.strip()}"))
+    lineas.append(_center("PAGO RECHAZADO"))
+    lineas.append(_center("(comprobante informativo)"))
+    lineas.append(_sep())
+    lineas.append(f"Folio: {venta.folio}")
+    lineas.append(f"Fecha: {_fmt_fecha(fecha, fecha_formato, tz_offset)}")
+    lineas.append(f"Cajero: {cajero_nombre}")
+    lineas.append(_sep())
+    lineas.append(_lr("Monto intentado:", _money(venta.total)))
+    # Tarjeta usada (si la order trajo los datos): tipo, marca y últimos 4.
+    if pago is not None:
+        tipo = _ETIQUETA_TARJETA.get(getattr(pago, "mp_payment_type", None) or "", "")
+        marca = getattr(pago, "mp_card_brand", None)
+        last4 = getattr(pago, "mp_card_last4", None)
+        detalle = " ".join(
+            x
+            for x in [
+                ("Tarjeta " + tipo).strip() if tipo else "Tarjeta",
+                str(marca).upper() if marca else "",
+                f"****{last4}" if last4 else "",
+            ]
+            if x
+        )
+        if detalle:
+            lineas.append(detalle)
+    lineas.append(_sep())
+    lineas.append(_center("*** PAGO RECHAZADO ***"))
+    lineas.append(_center("No se realizó ningún cargo."))
+    lineas.append(_center("Intenta de nuevo o paga en efectivo."))
+    lineas.append(_sep())
+    return "\n".join(lineas)

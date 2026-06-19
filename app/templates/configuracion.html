@@ -1,9 +1,12 @@
 {% extends "shell.html" %}
 {% block title %}Configuración — {{ business_name }}{% endblock %}
 {% block content %}
-<h2>Configuración del ticket</h2>
+<h2>Configuración</h2>
 {% if msg %}<div class="ok">{{ msg }}</div>{% endif %}
 {% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+
+{# ============================ 1) TICKET ============================ #}
+<h3 style="margin-top:1rem;">🧾 Plantilla del ticket</h3>
 <p class="muted">Estos textos aparecen en el ticket impreso. La leyenda legal
   «NOTA DE COMPRA (no es CFDI)» es fija y no se edita.</p>
 
@@ -38,25 +41,68 @@
   <input name="ticket_tz_offset" class="mono" inputmode="numeric"
          value="{{ cfg.ticket_tz_offset }}" placeholder="-6" style="width:6rem;" />
 
-  <hr style="margin:1rem 0;border:none;border-top:1px solid #ddd;">
+  <button class="btn btn-primary" type="submit" style="margin-top:.8rem;">Guardar ticket</button>
+</form>
+
+{# ============================ 2) APIs ============================ #}
+<h3 style="margin-top:1.6rem;">🔌 APIs e integraciones</h3>
+
+<div class="panel" style="max-width:520px;">
+  <strong>Mercado Pago — Access Token</strong>
+  <p class="muted" style="margin:.2rem 0 .5rem;">Credencial de producción usada para
+    cobrar con la terminal Point. Se guarda en el servidor (archivo <span class="mono">.env</span>,
+    nunca en el repositorio).</p>
+
+  {# Testigo de estado (carga diferida; se reemplaza tras actualizar). #}
+  <div id="api-mp-estado" hx-get="/configuracion/api/mp/estado" hx-trigger="load"
+       hx-swap="outerHTML"><span class="muted">Comprobando token…</span></div>
+
+  <div class="warn" role="alert" style="margin:.6rem 0;">
+    ⚠️ Al guardar un token nuevo, <strong>reemplaza al anterior</strong> y este queda
+    obsoleto en la app. Para invalidarlo del todo, revócalo después en el panel de
+    desarrolladores de Mercado Pago.
+  </div>
+
+  <form hx-post="/configuracion/api/mp" hx-target="#api-mp-estado" hx-swap="outerHTML"
+        hx-disabled-elt="find button" style="margin:0;">
+    <label>Nuevo Access Token <span class="muted">(APP_USR-…)</span></label>
+    <input name="mp_token" type="password" class="mono" autocomplete="off"
+           placeholder="pega aquí el token nuevo" style="width:100%;" />
+    <button class="btn btn-primary" type="submit" style="margin-top:.5rem;">
+      Actualizar token de Mercado Pago</button>
+    <span class="htmx-indicator muted" style="margin-left:.5rem;">Validando…</span>
+  </form>
+</div>
+
+<div class="panel" style="max-width:520px;margin-top:.8rem;">
   <strong>Tipos de cambio (MXN por unidad)</strong>
-  <p class="muted" style="margin:.2rem 0 .6rem;">Manuales: tú los fijas y la app
-    los aplica a los precios capturados en divisa. Puedes traer una sugerencia
-    desde la API con el botón de abajo. El total siempre se concilia en MXN.</p>
+  <p class="muted" style="margin:.2rem 0 .5rem;">Manuales: tú los fijas y la app los
+    aplica a precios capturados en divisa (el total siempre se concilia en MXN).
+    El botón consulta la API pública <span class="mono">open.er-api.com</span>
+    (servicio gratuito, sin llave).</p>
 
-  <label>USD → MXN</label>
-  <input name="fx_usd_mxn" class="mono" inputmode="decimal"
-         value="{{ '%.4f'|format(fx_usd) }}" style="width:8rem;" />
-  <label>EUR → MXN</label>
-  <input name="fx_eur_mxn" class="mono" inputmode="decimal"
-         value="{{ '%.4f'|format(fx_eur) }}" style="width:8rem;" />
-  {% if fx_fecha %}<p class="muted" style="margin:.3rem 0 0;">Última actualización API: {{ fx_fecha }}</p>{% endif %}
+  <form method="post" action="/configuracion/fx" style="margin:0;">
+    <label>USD → MXN</label>
+    <input name="fx_usd_mxn" class="mono" inputmode="decimal"
+           value="{{ '%.4f'|format(fx_usd) }}" style="width:8rem;" />
+    <label>EUR → MXN</label>
+    <input name="fx_eur_mxn" class="mono" inputmode="decimal"
+           value="{{ '%.4f'|format(fx_eur) }}" style="width:8rem;" />
+    {% if fx_fecha %}<p class="muted" style="margin:.3rem 0 0;">Última actualización API: {{ fx_fecha }}</p>{% endif %}
+    <button class="btn btn-primary" type="submit" style="margin-top:.6rem;">Guardar tipos de cambio</button>
+  </form>
+  <form method="post" action="/configuracion/fx-actualizar" style="margin-top:.5rem;">
+    <button class="btn" type="submit" title="Consulta open.er-api.com y guarda los tipos de cambio">
+      🔄 Actualizar desde API</button>
+  </form>
+</div>
 
-  <button class="btn btn-primary" type="submit" style="margin-top:.8rem;">Guardar</button>
-</form>
-
-<form method="post" action="/configuracion/fx-actualizar" style="max-width:520px;margin-top:.6rem;">
-  <button class="btn" type="submit" title="Consulta open.er-api.com y guarda los tipos de cambio">
-    🔄 Actualizar tipos de cambio desde API</button>
-</form>
+{# ============================ 3) IMPRESORA ============================ #}
+<h3 style="margin-top:1.6rem;">🖨️ Impresora</h3>
+<div class="panel" style="max-width:520px;">
+  <p class="muted" style="margin:.2rem 0 .5rem;">Estado de la impresora térmica (USB).
+    Si aparece en rojo, pulsa «Reconectar» para reestablecer el puente USB.</p>
+  <div id="impresora-estado" hx-get="/configuracion/impresora/estado" hx-trigger="load"
+       hx-swap="outerHTML"><span class="muted">Comprobando impresora…</span></div>
+</div>
 {% endblock %}

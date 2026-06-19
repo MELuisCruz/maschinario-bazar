@@ -2,7 +2,7 @@
 {% block title %}Venta — {{ business_name }}{% endblock %}
 {% block content %}
 <form hx-post="/venta/scan" hx-target="#venta-main" hx-swap="outerHTML"
-      hx-on::after-request="this.reset(); document.getElementById('scan-input').focus();"
+      data-reset-on-success="true"
       style="margin-bottom:.6rem;">
   <label for="scan-input">Escanea o teclea el código</label>
   <input id="scan-input" name="codigo" autocomplete="off"
@@ -12,7 +12,7 @@
 <details style="margin-bottom:.8rem;">
   <summary class="btn" style="display:inline-block;cursor:pointer;">➕ Producto especial</summary>
   <form hx-post="/venta/especial" hx-target="#venta-main" hx-swap="outerHTML"
-        hx-on::after-request="this.reset();"
+        data-reset-on-success="true"
         class="panel" style="margin-top:.4rem;display:flex;flex-direction:column;gap:.3rem;max-width:480px;">
     <label>Referencia <span class="muted">(sale en el ticket, máx. 50)</span></label>
     <input name="referencia" maxlength="50" required placeholder="p. ej. Artículo a granel" />

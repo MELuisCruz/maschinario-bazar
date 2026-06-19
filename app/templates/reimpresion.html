@@ -3,7 +3,6 @@
 {% block content %}
 <h2>Reimpresión de ticket</h2>
 <form hx-post="/reimpresion/buscar" hx-target="#reimp" hx-swap="outerHTML"
-      hx-on::after-request="document.getElementById('scan-input').focus();"
       style="max-width:480px;margin-bottom:1rem;">
   <label for="scan-input">Folio (escanea el ticket)</label>
   <input id="scan-input" name="folio" autocomplete="off" value="{{ folio }}" placeholder="V-000123" />

@@ -2,14 +2,36 @@
 {% block title %}Reportes — {{ business_name }}{% endblock %}
 {% block content %}
 <h2>Reportes</h2>
-<div style="display:flex;gap:.4rem;margin-bottom:1rem;align-items:center;">
+{% set rango_activo = (desde and hasta) %}
+<div style="display:flex;gap:.4rem;margin-bottom:.6rem;align-items:center;flex-wrap:wrap;">
   <span class="muted">Periodo:</span>
-  <a class="btn {{ 'btn-primary' if periodo=='hoy' }}" href="/reportes?periodo=hoy">Hoy</a>
-  <a class="btn {{ 'btn-primary' if periodo=='7dias' }}" href="/reportes?periodo=7dias">7 días</a>
-  <a class="btn {{ 'btn-primary' if periodo=='mes' }}" href="/reportes?periodo=mes">Mes</a>
-  <a class="btn" href="/reportes/export?periodo={{ periodo }}" style="margin-left:auto;"
+  <a class="btn {{ 'btn-primary' if periodo=='hoy' and not rango_activo }}" href="/reportes?periodo=hoy">Hoy</a>
+  <a class="btn {{ 'btn-primary' if periodo=='7dias' and not rango_activo }}" href="/reportes?periodo=7dias">7 días</a>
+  <a class="btn {{ 'btn-primary' if periodo=='mes' and not rango_activo }}" href="/reportes?periodo=mes">Mes</a>
+  {% if es_admin(cajero) %}
+  <a class="btn" style="margin-left:auto;"
+     href="/reportes/export?periodo={{ periodo }}{% if rango_activo %}&desde={{ desde }}&hasta={{ hasta }}{% endif %}"
      title="La app no timbra; exporta para timbrado externo a RFC genérico">Export fiscal (CSV)</a>
+  {% endif %}
 </div>
+
+{# Rango de fechas (calendario). Si se llenan ambas, manda sobre el preset. #}
+<form method="get" action="/reportes" class="panel"
+      style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;max-width:560px;">
+  <div style="display:flex;flex-direction:column;">
+    <label>Desde</label>
+    <input type="date" name="desde" value="{{ desde }}" />
+  </div>
+  <div style="display:flex;flex-direction:column;">
+    <label>Hasta</label>
+    <input type="date" name="hasta" value="{{ hasta }}" />
+  </div>
+  <button class="btn btn-primary" type="submit">Consultar</button>
+  {% if rango_activo %}
+  <a class="btn" href="/reportes?periodo=hoy" title="Quitar el rango y volver a 'Hoy'">Limpiar</a>
+  <span class="muted">Rango: {{ desde }} → {{ hasta }}</span>
+  {% endif %}
+</form>
 
 <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
   <div class="panel"><div class="muted">Ventas</div><div class="mono" style="font-size:1.6rem;">${{ '%.2f'|format(rep.total) }}</div></div>

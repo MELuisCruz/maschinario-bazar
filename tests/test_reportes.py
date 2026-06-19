@@ -86,3 +86,24 @@ def test_http_reportes_y_export(op_client, make_producto, db, turno):
     assert r2.status_code == 200
     assert r2.headers["content-type"].startswith("text/csv")
     assert "XAXX010101000" in r2.text
+
+
+def test_export_fiscal_solo_admin(basic_client):
+    # Restricción silenciosa: el cajero no-admin no puede exportar (403)…
+    assert basic_client.get("/reportes/export?periodo=mes").status_code == 403
+
+
+def test_cajero_no_ve_boton_export(basic_client):
+    # …y tampoco ve el botón de export en la pantalla de Reportes.
+    r = basic_client.get("/reportes?periodo=hoy")
+    assert r.status_code == 200 and "Export fiscal" not in r.text
+
+
+def test_reportes_rango_de_fechas(op_client, make_producto, db, turno):
+    _vender(db, turno, make_producto, "RG1", "100.00")
+    r = op_client.get("/reportes?desde=2026-06-01&hasta=2026-06-30")
+    assert r.status_code == 200
+    assert "Rango: 2026-06-01" in r.text  # el rango personalizado se refleja
+    # Export con el mismo rango (admin).
+    r2 = op_client.get("/reportes/export?desde=2026-06-01&hasta=2026-06-30")
+    assert r2.status_code == 200 and r2.headers["content-type"].startswith("text/csv")

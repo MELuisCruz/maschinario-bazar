@@ -154,8 +154,9 @@ def conciliar_tarjeta(session: Session, pago: Pago, client) -> str:
     order = client.get_order(pago.mp_order_id)
     estado = mp_point.estado_desde_order(order)
     pago.estado = estado
-    if estado == "aprobado":
-        # Guarda tipo (crédito/débito), marca y últimos 4 para el ticket.
+    if estado in ("aprobado", "rechazado"):
+        # Guarda tipo (crédito/débito), marca y últimos 4 para el ticket
+        # (también en rechazo: el comprobante de rechazo muestra la tarjeta).
         datos = mp_point.datos_tarjeta_desde_order(order)
         pago.mp_payment_type = datos.get("tipo")
         pago.mp_card_brand = datos.get("marca")

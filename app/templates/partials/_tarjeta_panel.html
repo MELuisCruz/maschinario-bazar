@@ -51,6 +51,12 @@
 
   {% elif state == 'rechazado' %}
     <div class="err">Pago rechazado. Reintenta o cobra en efectivo.</div>
+    {% if print_ok %}
+      <div class="muted" style="margin:.3rem 0;">🖨️ Comprobante de rechazo impreso.</div>
+    {% elif print_ok is not none %}
+      <div class="warn" role="alert" style="margin:.3rem 0;">⚠️ No se pudo imprimir el
+        comprobante de rechazo ({{ print_error }}).</div>
+    {% endif %}
     <button class="btn btn-primary" style="width:100%;"
             hx-post="/cobro/tarjeta/iniciar" hx-target="#tarjeta-panel" hx-swap="outerHTML">
       Reintentar tarjeta

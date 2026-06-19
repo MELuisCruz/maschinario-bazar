@@ -19,11 +19,31 @@
     if (!editing) el.focus();
   }
 
+  function clearScan() {
+    var el = scanInput();
+    if (el) el.value = "";
+  }
+
   // Auto-foco al cargar (§8.1).
   document.addEventListener("DOMContentLoaded", focusScan);
 
   // Recuperar foco tras swaps HTMX que reemplazan la tabla / cierran modal (§8.2).
+  // En la pantalla de venta (existe #venta-main), además limpia el código ya
+  // procesado para preparar la siguiente lectura del escáner.
   document.body.addEventListener("htmx:afterSwap", function () {
+    if (document.getElementById("venta-main")) clearScan();
+    focusScan();
+  });
+
+  // Tras un POST (HTMX), limpia los formularios marcados con
+  // `data-reset-on-success` (p. ej. el de producto especial). Sustituye a los
+  // `hx-on::after-request` inline, que la CSP bloquea (HTMX los evalúa con eval).
+  document.body.addEventListener("htmx:afterRequest", function (evt) {
+    var d = evt.detail || {};
+    if (d.failed) return;
+    var elt = d.elt;
+    var form = elt && elt.closest ? elt.closest("form[data-reset-on-success]") : null;
+    if (form && typeof form.reset === "function") form.reset();
     focusScan();
   });
 

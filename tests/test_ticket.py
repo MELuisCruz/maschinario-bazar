@@ -212,6 +212,19 @@ def test_ticket_tarjeta_muestra_tipo_marca_y_ultimos4():
     assert "VISA" in txt and "****3610" in txt
 
 
+def test_ticket_rechazo_contenido():
+    pago = _fake_pago("rechazado", tipo="debit_card", marca="visa", last4="3610")
+    txt = printing.construir_ticket_rechazo(
+        _fake_venta([pago]), cajero_nombre="Ana", business_name="X", pago=pago
+    )
+    assert "PAGO RECHAZADO" in txt
+    assert "V-000011" in txt  # folio de la venta
+    assert "Monto intentado:" in txt
+    assert "No se realizó ningún cargo." in txt
+    # Muestra la tarjeta usada (tipo, marca, últimos 4).
+    assert "Tarjeta débito" in txt and "VISA" in txt and "****3610" in txt
+
+
 def test_http_reimpresion_busca_y_muestra(op_client, make_producto, db, turno):
     v = _venta_pagada(db, turno, make_producto)
     r = op_client.post("/reimpresion/buscar", data={"folio": v.folio})

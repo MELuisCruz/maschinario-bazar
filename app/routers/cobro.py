@@ -228,6 +228,23 @@ def tarjeta_estado(
             print_ok=res.ok,
             print_error=res.error,
         )
+    if estado == "rechazado":
+        # Comprobante informativo de rechazo (no hubo cargo). No rompe si falla.
+        texto = printing.construir_ticket_rechazo(
+            venta,
+            cajero_nombre=cajero.nombre,
+            pago=pago,
+            **cfg_svc.ticket_kwargs(session),
+        )
+        res = printing.imprimir_texto(texto, settings=get_settings())
+        return _panel(
+            request,
+            venta,
+            state=estado,
+            pago=pago,
+            print_ok=res.ok,
+            print_error=res.error,
+        )
     return _panel(request, venta, state=estado, pago=pago)
 
 

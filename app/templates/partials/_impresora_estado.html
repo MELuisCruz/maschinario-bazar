@@ -1,0 +1,14 @@
+{# Testigo del estado de la impresora + botón de reconexión (verde/rojo). #}
+<div id="impresora-estado">
+  <p style="margin:.3rem 0;">
+    <span style="display:inline-block;width:.7rem;height:.7rem;border-radius:50%;
+      background:{{ '#1a8f3c' if impresora.online else '#c0392b' }};margin-right:.45rem;vertical-align:middle;"></span>
+    <strong>{{ 'En línea' if impresora.online else 'No disponible' }}</strong>
+  </p>
+  <p class="muted" style="margin:.2rem 0 .6rem;">{{ impresora.mensaje }}</p>
+  <form hx-post="/configuracion/impresora/reconectar" hx-target="#impresora-estado"
+        hx-swap="outerHTML" hx-disabled-elt="find button" style="margin:0;">
+    <button class="btn" type="submit">🔌 Reconectar impresora</button>
+    <span class="htmx-indicator muted" style="margin-left:.5rem;">Reconectando… (unos segundos)</span>
+  </form>
+</div>

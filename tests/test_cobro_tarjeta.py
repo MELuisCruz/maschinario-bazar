@@ -217,6 +217,24 @@ def test_client_409_already_queued_mapea_excepcion():
         )
 
 
+def test_estado_rechazado_imprime_comprobante(op_client, make_producto, db, turno):
+    """Una tarjeta rechazada dispara el comprobante de rechazo (tolerante a fallos)."""
+    from app.deps import get_mp_client
+    from app.main import app
+
+    v = _venta_tarjeta(db, turno, make_producto)
+    fake = FakeMP(order_status="rejected", pay_status="rejected")
+    cobro.iniciar_tarjeta(db, v, fake, "TERM01")
+    db.commit()
+    app.dependency_overrides[get_mp_client] = lambda: fake
+    try:
+        r = op_client.get("/cobro/tarjeta/estado")
+    finally:
+        app.dependency_overrides.pop(get_mp_client, None)
+    assert r.status_code == 200
+    assert "Pago rechazado" in r.text  # panel de rechazo (impresión es tolerante)
+
+
 def test_conciliar_guarda_datos_de_tarjeta(db, turno, make_producto):
     """Al aprobar, persiste tipo (crédito/débito), marca y últimos 4 para el ticket."""
     v = _venta_tarjeta(db, turno, make_producto)
