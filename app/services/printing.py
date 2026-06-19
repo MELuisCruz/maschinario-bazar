@@ -8,6 +8,7 @@ reimpresión (AT-9.2). Sin cajón: no se emite `ESC p`.
 
 from __future__ import annotations
 
+import textwrap
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -99,8 +100,16 @@ def construir_ticket_texto(
     lineas.append(_sep())
     lineas.append(_lr("CANT DESCRIPCION", "IMPORTE"))
     for ln in venta.lineas:
-        desc = ln.descripcion[:30]
-        lineas.append(_lr(f"{Decimal(ln.cantidad):g} {desc}", _money(ln.importe)))
+        cant = f"{Decimal(ln.cantidad):g}"
+        desc = ln.descripcion
+        if len(desc) <= 30:
+            lineas.append(_lr(f"{cant} {desc}", _money(ln.importe)))
+        else:
+            # Descripción larga (p. ej. producto especial): en sus propias líneas
+            # para que se vea completa, y luego la cantidad × importe.
+            for chunk in textwrap.wrap(desc, WIDTH):
+                lineas.append(chunk)
+            lineas.append(_lr(f"  {cant} x", _money(ln.importe)))
         if Decimal(ln.descuento) > 0:
             lineas.append(_lr("   (desc.)", f"-{_money(ln.descuento)}"))
     lineas.append(_sep())
