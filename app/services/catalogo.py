@@ -101,6 +101,36 @@ def ajustar_stock(
         )
 
 
+def reabastecer(
+    session: Session,
+    producto: Producto,
+    cantidad: Decimal,
+    cajero_id: int | None = None,
+) -> None:
+    """Suma `cantidad` (positiva) a la existencia vía movimiento 'ajuste'."""
+    cantidad = Decimal(cantidad)
+    if cantidad <= 0:
+        raise ValueError("La cantidad a reabastecer debe ser mayor a 0.")
+    stock.registrar_movimiento(
+        session,
+        producto,
+        "ajuste",
+        cantidad,
+        referencia="reabasto",
+        cajero_id=cajero_id,
+    )
+
+
+def desactivar(session: Session, producto: Producto) -> None:
+    """Eliminación lógica: el producto deja de venderse y de listarse.
+
+    No se borra físicamente para preservar el historial (ventas y movimientos
+    referencian el producto por FK). El lookup de venta ya filtra activo=True.
+    """
+    producto.activo = False
+    session.flush()
+
+
 def importar_csv(
     session: Session, contenido: str, cajero_id: int | None = None
 ) -> ImportResult:

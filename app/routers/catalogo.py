@@ -31,7 +31,12 @@ def _dec(v: str, default="0") -> Decimal:
 
 def _listar(session: Session) -> list[Producto]:
     return list(
-        session.scalars(select(Producto).order_by(Producto.nombre).limit(200)).all()
+        session.scalars(
+            select(Producto)
+            .where(Producto.activo.is_(True))  # los eliminados (lógicos) no se listan
+            .order_by(Producto.nombre)
+            .limit(200)
+        ).all()
     )
 
 
@@ -152,4 +157,66 @@ async def importar(
             "msg": None,
             "import_res": res,
         },
+    )
+
+
+def _render_catalogo(request, session, cajero, *, msg=None, error=None, status=200):
+    return templates.TemplateResponse(
+        request,
+        "catalogo.html",
+        {
+            "cajero": cajero,
+            "productos": _listar(session),
+            "active_nav": "catalogo",
+            "error": error,
+            "msg": msg,
+        },
+        status_code=status,
+    )
+
+
+@router.post("/{producto_id}/reabastecer", response_class=HTMLResponse)
+def reabastecer(
+    request: Request,
+    producto_id: int,
+    cantidad: str = Form(...),
+    session: Session = Depends(get_session),
+    cajero: Cajero = Depends(require_admin),  # solo admin cambia existencias
+):
+    producto = session.get(Producto, producto_id)
+    if producto is None or not producto.activo:
+        return _render_catalogo(
+            request, session, cajero, error="Producto no encontrado.", status=404
+        )
+    try:
+        cat.reabastecer(session, producto, _dec(cantidad), cajero_id=cajero.id)
+    except ValueError as exc:
+        session.rollback()
+        return _render_catalogo(request, session, cajero, error=str(exc), status=400)
+    session.commit()
+    return _render_catalogo(
+        request,
+        session,
+        cajero,
+        msg=f"«{producto.nombre}»: existencia ahora {producto.existencia:g}.",
+    )
+
+
+@router.post("/{producto_id}/eliminar", response_class=HTMLResponse)
+def eliminar(
+    request: Request,
+    producto_id: int,
+    session: Session = Depends(get_session),
+    cajero: Cajero = Depends(require_admin),  # solo admin elimina del catálogo
+):
+    producto = session.get(Producto, producto_id)
+    if producto is None or not producto.activo:
+        return _render_catalogo(
+            request, session, cajero, error="Producto no encontrado.", status=404
+        )
+    nombre = producto.nombre
+    cat.desactivar(session, producto)
+    session.commit()
+    return _render_catalogo(
+        request, session, cajero, msg=f"«{nombre}» eliminado del catálogo."
     )

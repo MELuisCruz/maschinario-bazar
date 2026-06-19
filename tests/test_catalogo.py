@@ -91,3 +91,58 @@ def test_http_import_csv(op_client):
         files={"archivo": ("productos.csv", csv_bytes, "text/csv")},
     )
     assert r.status_code == 200 and "1 creados" in r.text
+
+
+# --- Re-abastecer y eliminar (gestión de catálogo, solo admin) ---
+
+
+def test_reabastecer_suma_existencia(db, make_producto):
+    p = make_producto(codigo="RB", existencia="5")
+    cat.reabastecer(db, p, D("10"))
+    db.commit()
+    assert p.existencia == D("15")
+
+
+def test_reabastecer_rechaza_no_positivo(db, make_producto):
+    p = make_producto(codigo="RB0", existencia="5")
+    with pytest.raises(ValueError):
+        cat.reabastecer(db, p, D("0"))
+    db.rollback()
+
+
+def test_desactivar_es_eliminacion_logica(db, make_producto):
+    p = make_producto(codigo="DEL", existencia="3")
+    cat.desactivar(db, p)
+    db.commit()
+    assert p.activo is False
+
+
+def test_http_reabastecer_admin(op_client, db, make_producto):
+    p = make_producto(codigo="HRB", existencia="2")
+    r = op_client.post(f"/catalogo/{p.id}/reabastecer", data={"cantidad": "8"})
+    assert r.status_code == 200
+    db.expire_all()
+    assert db.get(Producto, p.id).existencia == D("10")
+
+
+def test_http_eliminar_admin(op_client, db, make_producto):
+    p = make_producto(codigo="HDEL", existencia="1")
+    r = op_client.post(f"/catalogo/{p.id}/eliminar")
+    assert r.status_code == 200
+    db.expire_all()
+    prod = db.get(Producto, p.id)
+    assert prod.activo is False  # eliminación lógica
+    # Ya no aparece en el listado del catálogo.
+    assert "HDEL" not in r.text
+
+
+def test_http_reabastecer_no_admin_bloqueado(basic_client, db, make_producto):
+    p = make_producto(codigo="NRB", existencia="2")
+    r = basic_client.post(f"/catalogo/{p.id}/reabastecer", data={"cantidad": "5"})
+    assert r.status_code == 403
+
+
+def test_http_eliminar_no_admin_bloqueado(basic_client, db, make_producto):
+    p = make_producto(codigo="NDEL", existencia="2")
+    r = basic_client.post(f"/catalogo/{p.id}/eliminar")
+    assert r.status_code == 403
