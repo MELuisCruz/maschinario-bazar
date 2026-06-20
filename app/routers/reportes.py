@@ -5,14 +5,15 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_session
 from app.deps import require_admin, require_cajero, templates
 from app.models import Cajero
 from app.services import configuracion as cfg_svc
-from app.services import fiscal_export, reportes
+from app.services import fiscal_export, reportes, turnos
+from app.services.cajeros import es_admin
 
 router = APIRouter(prefix="/reportes", tags=["reportes"])
 
@@ -61,8 +62,17 @@ def reportes_home(
     session: Session = Depends(get_session),
     cajero: Cajero = Depends(require_cajero),
 ):
-    rango = _resolver_rango(session, periodo, desde, hasta)
-    rep = reportes.generar(session, rango[0], rango[1])
+    if es_admin(cajero):
+        # Admin: reporte por preset o por rango de fechas (faculta consulta/export).
+        rango = _resolver_rango(session, periodo, desde, hasta)
+        rep = reportes.generar(session, rango[0], rango[1])
+    else:
+        # Cajero: SOLO las ventas de su turno actual y vigente (sin controles).
+        turno = turnos.open_turno_for(session, cajero.id)
+        if turno is None:
+            return RedirectResponse("/turno", status_code=303)
+        ahora = datetime.now(timezone.utc) + timedelta(seconds=1)
+        rep = reportes.generar(session, turno.abierto_en, ahora, cajero_id=cajero.id)
     return templates.TemplateResponse(
         request,
         "reportes.html",

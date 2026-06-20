@@ -89,14 +89,21 @@ def test_http_reportes_y_export(op_client, make_producto, db, turno):
 
 
 def test_export_fiscal_solo_admin(basic_client):
-    # Restricción silenciosa: el cajero no-admin no puede exportar (403)…
+    # Restricción silenciosa: el cajero no-admin no puede exportar (403).
     assert basic_client.get("/reportes/export?periodo=mes").status_code == 403
 
 
-def test_cajero_no_ve_boton_export(basic_client):
-    # …y tampoco ve el botón de export en la pantalla de Reportes.
-    r = basic_client.get("/reportes?periodo=hoy")
-    assert r.status_code == 200 and "Export fiscal" not in r.text
+def test_cajero_ve_solo_su_turno_sin_controles(basic_client):
+    # El cajero entra a Reportes pero ve SOLO su turno actual, sin controles.
+    r = basic_client.get("/reportes")
+    assert r.status_code == 200
+    assert "Generar Reporte" not in r.text and "Consultar" not in r.text
+    assert "turno actual" in r.text
+
+
+def test_admin_ve_boton_generar_reporte(op_client):
+    r = op_client.get("/reportes?periodo=hoy")
+    assert r.status_code == 200 and "Generar Reporte" in r.text
 
 
 def test_reportes_rango_de_fechas(op_client, make_producto, db, turno):
