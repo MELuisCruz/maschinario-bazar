@@ -21,13 +21,14 @@
 <div style="display:grid;grid-template-columns:1fr 320px;gap:1rem;">
   <div>
     <table>
-      <thead><tr><th>Código</th><th>Nombre</th><th class="num">Precio</th>
+      <thead><tr><th>SKU</th><th>Cód. barras</th><th>Nombre</th><th class="num">Precio</th>
         <th class="num">Exist.</th><th>Estado</th>
         {% if es_admin(cajero) %}<th>Acciones</th>{% endif %}</tr></thead>
       <tbody>
       {% for p in productos %}
         <tr>
-          <td class="mono">{{ p.codigo_barras or p.sku or '—' }}</td>
+          <td class="mono">{{ p.sku or '—' }}</td>
+          <td class="mono">{{ p.codigo_barras or '—' }}</td>
           <td>{{ p.nombre }}</td>
           <td class="num mono">${{ '%.2f'|format(p.precio) }}</td>
           <td class="num mono">{{ '%g'|format(p.existencia) }}</td>
@@ -55,7 +56,7 @@
           </td>
           {% endif %}
         </tr>
-      {% else %}<tr><td colspan="{{ 6 if es_admin(cajero) else 5 }}" class="empty">Sin productos.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="{{ 7 if es_admin(cajero) else 6 }}" class="empty">Sin productos.</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

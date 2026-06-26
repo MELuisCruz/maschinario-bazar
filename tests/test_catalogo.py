@@ -99,6 +99,26 @@ def test_import_csv_upsert_por_sku(db):
     assert p.nombre == "SoloSku2" and p.existencia == D("10")
 
 
+def test_import_csv_codigo_barras_na_no_colapsa_filas(db):
+    # Bug real: "N/A" literal en codigo_barras hacía que TODAS las filas
+    # compartieran clave y el upsert las colapsara en un solo producto.
+    # Con la normalización, "N/A" = sin código y se distinguen por SKU.
+    csv_text = (
+        "codigo_barras,nombre,precio,iva_tasa,existencia,controla_stock,sku\n"
+        "N/A,Agujero Negro,99,0.16,5,true,BH-M-00\n"
+        "N/A,Cubo Infinito,69,0.16,7,true,IC-00\n"
+        "n/a,Oloide,119,0.16,7,true,Geo-O-01\n"
+    )
+    res = cat.importar_csv(db, csv_text)
+    db.commit()
+    assert res.creados == 3 and not res.errores
+    assert db.query(Producto).count() == 3
+    # Ninguno quedó con el código basura "N/A".
+    assert db.query(Producto).filter(Producto.codigo_barras.isnot(None)).count() == 0
+    nombres = {p.nombre for p in db.query(Producto).all()}
+    assert nombres == {"Agujero Negro", "Cubo Infinito", "Oloide"}
+
+
 def test_http_alta_con_sku_sin_codigo_barras(op_client, db):
     r = op_client.post(
         "/catalogo/alta", data={"nombre": "SoloSKU", "precio": "5.00", "sku": "MAN-1"}

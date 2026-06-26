@@ -23,6 +23,19 @@ class CodigoDuplicado(Exception):
     """Ya existe un producto con ese código de barras o SKU (AT-6.1)."""
 
 
+# Valores "placeholder" que la gente escribe en lugar de dejar la celda vacía.
+# Para codigo_barras/sku se tratan como SIN valor: si se tomaran literales, todas
+# las filas con "N/A" compartirían clave y el upsert las colapsaría en un solo
+# producto (bug: solo se cargaba 1 fila de todo el CSV).
+_PLACEHOLDERS_VACIO = {"n/a", "na", "n.a.", "-", "--", "none", "null", "s/n", "sin"}
+
+
+def _clave_opcional(valor: str | None) -> str | None:
+    """Normaliza una clave opcional (codigo_barras/sku): placeholders → None."""
+    v = (valor or "").strip()
+    return None if v.lower() in _PLACEHOLDERS_VACIO else (v or None)
+
+
 @dataclass
 class ImportResult:
     creados: int = 0
@@ -142,7 +155,7 @@ def importar_csv(
     for i, row in enumerate(reader, start=2):
         try:
             nombre = (row.get("nombre") or "").strip()
-            codigo = (row.get("codigo_barras") or "").strip() or None
+            codigo = _clave_opcional(row.get("codigo_barras"))
             if not nombre:
                 raise ValueError("nombre vacío")
             try:
@@ -169,7 +182,7 @@ def importar_csv(
                 "0",
                 "no",
             )
-            sku = (row.get("sku") or "").strip() or None
+            sku = _clave_opcional(row.get("sku"))
 
             # Upsert por código de barras O por SKU (soporta items solo-SKU).
             existente = None
