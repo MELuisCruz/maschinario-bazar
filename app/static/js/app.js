@@ -65,7 +65,7 @@
     F1: "/venta",
     F2: "/devolucion",
     F3: "/reimpresion",
-    F4: "/catalogo",
+    F4: "/inventario",
     F5: "/reportes",
     F6: "/corte",
   };

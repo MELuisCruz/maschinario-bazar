@@ -1,7 +1,7 @@
-"""Catálogo e inventario: alta/edición, import CSV, stock (PRD §3.4, AT-6.x).
+"""Catálogo: alta/edición, eliminación e import CSV de PRODUCTOS (PRD §3.4, AT-6.x).
 
-Acceso: cajero autenticado. SUPUESTO: restringir a rol administrador es una
-mejora pendiente (UI_SPEC §5.5 / permisos por rol a confirmar).
+Acceso: SOLO administrador (toda la gestión del catálogo). Las EXISTENCIAS se
+manejan aparte, en el módulo Inventario (`app/routers/inventario.py`).
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_session
-from app.deps import require_admin, require_cajero, templates
+from app.deps import require_admin, templates
 from app.models import Cajero, Producto
 from app.services import catalogo as cat
 from app.services.barcodes import code128_data_uri
@@ -44,7 +44,7 @@ def _listar(session: Session) -> list[Producto]:
 def catalogo_home(
     request: Request,
     session: Session = Depends(get_session),
-    cajero: Cajero = Depends(require_cajero),
+    cajero: Cajero = Depends(require_admin),
     msg: str | None = None,
 ):
     return templates.TemplateResponse(
@@ -64,7 +64,7 @@ def catalogo_home(
 def imprimible(
     request: Request,
     session: Session = Depends(get_session),
-    cajero: Cajero = Depends(require_cajero),
+    cajero: Cajero = Depends(require_admin),
 ):
     """Hoja imprimible (PDF vía navegador) con nombre + código de barras por
     producto, para escanear en caja. Codifica el SKU (o el código de barras si
@@ -172,33 +172,6 @@ def _render_catalogo(request, session, cajero, *, msg=None, error=None, status=2
             "msg": msg,
         },
         status_code=status,
-    )
-
-
-@router.post("/{producto_id}/reabastecer", response_class=HTMLResponse)
-def reabastecer(
-    request: Request,
-    producto_id: int,
-    cantidad: str = Form(...),
-    session: Session = Depends(get_session),
-    cajero: Cajero = Depends(require_admin),  # solo admin cambia existencias
-):
-    producto = session.get(Producto, producto_id)
-    if producto is None or not producto.activo:
-        return _render_catalogo(
-            request, session, cajero, error="Producto no encontrado.", status=404
-        )
-    try:
-        cat.reabastecer(session, producto, _dec(cantidad), cajero_id=cajero.id)
-    except ValueError as exc:
-        session.rollback()
-        return _render_catalogo(request, session, cajero, error=str(exc), status=400)
-    session.commit()
-    return _render_catalogo(
-        request,
-        session,
-        cajero,
-        msg=f"«{producto.nombre}»: existencia ahora {producto.existencia:g}.",
     )
 
 

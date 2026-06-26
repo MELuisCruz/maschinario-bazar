@@ -1,0 +1,51 @@
+{% extends "shell.html" %}
+{% block title %}Inventario — {{ business_name }}{% endblock %}
+{% block content %}
+<h2 style="margin:0;">Inventario <span class="muted" style="font-size:1rem;">· existencias</span></h2>
+<p class="muted" style="margin:.2rem 0 1rem;">
+  {% if es_admin(cajero) %}Reabastece o ajusta las existencias de cada producto.
+  {% else %}Consulta de existencias (solo lectura).{% endif %}
+</p>
+{% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+{% if msg %}<div class="ok">{{ msg }}</div>{% endif %}
+
+<table>
+  <thead><tr><th>SKU</th><th>Cód. barras</th><th>Nombre</th>
+    <th class="num">Existencia</th><th>Estado</th>
+    {% if es_admin(cajero) %}<th>Reabastecer</th><th>Ajustar a</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for p in productos %}
+    <tr>
+      <td class="mono">{{ p.sku or '—' }}</td>
+      <td class="mono">{{ p.codigo_barras or '—' }}</td>
+      <td>{{ p.nombre }}</td>
+      <td class="num mono">{{ '%g'|format(p.existencia) }}</td>
+      <td>
+        {% if not p.controla_stock %}<span class="tag">sin control</span>
+        {% elif p.existencia <= 0 %}<span class="tag tag-out">agotado</span>
+        {% elif p.existencia < 5 %}<span class="tag tag-low">bajo</span>
+        {% else %}<span class="tag tag-ok">ok</span>{% endif %}
+      </td>
+      {% if es_admin(cajero) %}
+      <td>
+        <form method="post" action="/inventario/{{ p.id }}/reabastecer"
+              style="display:flex;gap:.2rem;align-items:center;margin:0;">
+          <input name="cantidad" class="mono" inputmode="numeric" placeholder="+stock"
+                 required style="width:5rem;padding:.2rem;" title="Unidades a sumar" />
+          <button class="btn" type="submit" title="Sumar al stock">+</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" action="/inventario/{{ p.id }}/ajustar"
+              style="display:flex;gap:.2rem;align-items:center;margin:0;">
+          <input name="existencia" class="mono" inputmode="numeric" placeholder="exacto"
+                 required style="width:5rem;padding:.2rem;" title="Fijar existencia exacta" />
+          <button class="btn" type="submit" title="Fijar existencia">=</button>
+        </form>
+      </td>
+      {% endif %}
+    </tr>
+  {% else %}<tr><td colspan="{{ 7 if es_admin(cajero) else 5 }}" class="empty">Sin productos.</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

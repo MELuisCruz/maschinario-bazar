@@ -75,14 +75,19 @@ def test_no_admin_bloqueado_en_usuarios(basic_client):
     assert r2.status_code == 403
 
 
-def test_no_admin_bloqueado_en_catalogo_update(basic_client):
-    # Ver el catálogo sí (GET), actualizar no (POST).
-    assert basic_client.get("/catalogo").status_code == 200
+def test_no_admin_catalogo_es_admin_only_pero_ve_inventario(basic_client, make_producto):
+    # Catálogo es 100% admin: el cajero NO entra (ni ver ni actualizar).
+    assert basic_client.get("/catalogo").status_code == 403
     r = basic_client.post(
         "/catalogo/alta",
         data={"nombre": "Cosa", "precio": "10.00", "codigo_barras": "Z"},
     )
     assert r.status_code == 403
+    # Inventario sí lo CONSULTA (solo lectura), pero no puede ajustar existencias.
+    assert basic_client.get("/inventario").status_code == 200
+    p = make_producto(codigo="INVROL", existencia="3")
+    r2 = basic_client.post(f"/inventario/{p.id}/reabastecer", data={"cantidad": "5"})
+    assert r2.status_code == 403
 
 
 def test_no_admin_bloqueado_en_import_csv(basic_client):

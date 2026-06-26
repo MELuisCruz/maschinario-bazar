@@ -25,6 +25,7 @@ from app.routers import (
     configuracion,
     corte,
     devolucion,
+    inventario,
     reimpresion,
     reportes,
     usuarios,
@@ -106,6 +107,7 @@ app.include_router(venta.router)
 app.include_router(cobro.router)
 app.include_router(devolucion.router)
 app.include_router(catalogo.router)
+app.include_router(inventario.router)
 app.include_router(corte.router)
 app.include_router(reportes.router)
 app.include_router(reimpresion.router)

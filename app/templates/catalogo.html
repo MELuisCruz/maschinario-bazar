@@ -2,10 +2,12 @@
 {% block title %}Catálogo — {{ business_name }}{% endblock %}
 {% block content %}
 <div style="display:flex;align-items:center;gap:1rem;">
-  <h2 style="margin:0;">Catálogo e inventario</h2>
+  <h2 style="margin:0;">Catálogo <span class="muted" style="font-size:1rem;">· productos</span></h2>
   <span style="flex:1;"></span>
   <a class="btn" href="/catalogo/imprimible" target="_blank" rel="noopener">🖨️ Imprimir catálogo (PDF)</a>
 </div>
+<p class="muted" style="margin:.2rem 0 1rem;">Gestión de productos (alta, edición, eliminación e importación).
+  Las <a href="/inventario">existencias</a> se manejan en Inventario.</p>
 {% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
 {% if msg %}<div class="ok">{{ msg }}</div>{% endif %}
 {% if import_res %}
@@ -22,8 +24,7 @@
   <div>
     <table>
       <thead><tr><th>SKU</th><th>Cód. barras</th><th>Nombre</th><th class="num">Precio</th>
-        <th class="num">Exist.</th><th>Estado</th>
-        {% if es_admin(cajero) %}<th>Acciones</th>{% endif %}</tr></thead>
+        <th>Acciones</th></tr></thead>
       <tbody>
       {% for p in productos %}
         <tr>
@@ -31,37 +32,18 @@
           <td class="mono">{{ p.codigo_barras or '—' }}</td>
           <td>{{ p.nombre }}</td>
           <td class="num mono">${{ '%.2f'|format(p.precio) }}</td>
-          <td class="num mono">{{ '%g'|format(p.existencia) }}</td>
           <td>
-            {% if not p.controla_stock %}<span class="tag">sin control</span>
-            {% elif p.existencia <= 0 %}<span class="tag tag-out">agotado</span>
-            {% elif p.existencia < 5 %}<span class="tag tag-low">bajo</span>
-            {% else %}<span class="tag tag-ok">ok</span>{% endif %}
+            <form method="post" action="/catalogo/{{ p.id }}/eliminar" style="margin:0;"
+                  onsubmit="return confirm('¿Eliminar «{{ p.nombre|e }}» del catálogo? Dejará de venderse (el historial se conserva).');">
+              <button class="btn" type="submit" title="Eliminar del catálogo">🗑</button>
+            </form>
           </td>
-          {% if es_admin(cajero) %}
-          <td>
-            <div style="display:flex;gap:.3rem;align-items:center;">
-              <form method="post" action="/catalogo/{{ p.id }}/reabastecer"
-                    style="display:flex;gap:.2rem;align-items:center;margin:0;">
-                <input name="cantidad" class="mono" inputmode="numeric"
-                       placeholder="+stock" required
-                       style="width:5rem;padding:.2rem;" title="Unidades a sumar" />
-                <button class="btn" type="submit" title="Re-abastecer">+</button>
-              </form>
-              <form method="post" action="/catalogo/{{ p.id }}/eliminar" style="margin:0;"
-                    onsubmit="return confirm('¿Eliminar «{{ p.nombre|e }}» del catálogo? Dejará de venderse (el historial se conserva).');">
-                <button class="btn" type="submit" title="Eliminar del catálogo">🗑</button>
-              </form>
-            </div>
-          </td>
-          {% endif %}
         </tr>
-      {% else %}<tr><td colspan="{{ 7 if es_admin(cajero) else 6 }}" class="empty">Sin productos.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="5" class="empty">Sin productos.</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>
 
-  {% if es_admin(cajero) %}
   <aside style="display:flex;flex-direction:column;gap:1rem;">
     <form method="post" action="/catalogo/alta" class="panel">
       <strong>Alta de producto</strong>
@@ -86,9 +68,5 @@
       <button class="btn" type="submit" style="margin-top:.6rem;">Importar</button>
     </form>
   </aside>
-  {% else %}
-  <aside class="panel"><p class="muted">Solo un administrador puede dar de alta
-    productos o importar CSV.</p></aside>
-  {% endif %}
 </div>
 {% endblock %}

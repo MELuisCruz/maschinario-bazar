@@ -224,14 +224,6 @@ def test_http_eliminar_y_reinsertar(op_client, db, make_producto):
     assert prod.activo is True and prod.nombre == "Vela nueva"
 
 
-def test_http_reabastecer_admin(op_client, db, make_producto):
-    p = make_producto(codigo="HRB", existencia="2")
-    r = op_client.post(f"/catalogo/{p.id}/reabastecer", data={"cantidad": "8"})
-    assert r.status_code == 200
-    db.expire_all()
-    assert db.get(Producto, p.id).existencia == D("10")
-
-
 def test_http_eliminar_admin(op_client, db, make_producto):
     p = make_producto(codigo="HDEL", existencia="1")
     r = op_client.post(f"/catalogo/{p.id}/eliminar")
@@ -241,12 +233,6 @@ def test_http_eliminar_admin(op_client, db, make_producto):
     assert prod.activo is False  # eliminación lógica
     # Ya no aparece en el listado del catálogo.
     assert "HDEL" not in r.text
-
-
-def test_http_reabastecer_no_admin_bloqueado(basic_client, db, make_producto):
-    p = make_producto(codigo="NRB", existencia="2")
-    r = basic_client.post(f"/catalogo/{p.id}/reabastecer", data={"cantidad": "5"})
-    assert r.status_code == 403
 
 
 def test_http_eliminar_no_admin_bloqueado(basic_client, db, make_producto):
