@@ -180,6 +180,50 @@ def test_desactivar_es_eliminacion_logica(db, make_producto):
     assert p.activo is False
 
 
+def test_realta_reactiva_producto_eliminado_conserva_id(db, make_producto):
+    # Bug: tras eliminar (lógico), re-dar de alta el mismo código/SKU decía
+    # "ya existe". Ahora REACTIVA el mismo registro (conserva su historial).
+    p = make_producto(codigo="RE1", sku="SKU-RE1", nombre="Original", existencia="3")
+    pid = p.id
+    cat.desactivar(db, p)
+    db.commit()
+    re = cat.crear_producto(
+        db,
+        nombre="Reinsertado",
+        precio=D("99.00"),
+        codigo_barras="RE1",
+        existencia_inicial=D("5"),
+    )
+    db.commit()
+    assert re.id == pid  # mismo registro: historial intacto
+    assert re.activo is True
+    assert re.nombre == "Reinsertado"
+    assert re.existencia == D("5")  # existencia ajustada a la re-alta
+
+
+def test_alta_duplicado_activo_sigue_rechazando(db, make_producto):
+    make_producto(codigo="DUP-ACT", nombre="Activo")
+    with pytest.raises(cat.CodigoDuplicado):
+        cat.crear_producto(db, nombre="Otro", precio=D("1.00"), codigo_barras="DUP-ACT")
+    db.rollback()
+
+
+def test_http_eliminar_y_reinsertar(op_client, db, make_producto):
+    p = make_producto(codigo="HRE", nombre="Vela", existencia="2")
+    op_client.post(f"/catalogo/{p.id}/eliminar")
+    # Re-alta por la UI con el mismo código → ya NO debe fallar.
+    r = op_client.post(
+        "/catalogo/alta",
+        data={"nombre": "Vela nueva", "precio": "30.00", "codigo_barras": "HRE",
+              "existencia": "4"},
+    )
+    assert r.status_code == 200
+    assert "ya existe" not in r.text.lower()
+    db.expire_all()
+    prod = db.get(Producto, p.id)
+    assert prod.activo is True and prod.nombre == "Vela nueva"
+
+
 def test_http_reabastecer_admin(op_client, db, make_producto):
     p = make_producto(codigo="HRB", existencia="2")
     r = op_client.post(f"/catalogo/{p.id}/reabastecer", data={"cantidad": "8"})

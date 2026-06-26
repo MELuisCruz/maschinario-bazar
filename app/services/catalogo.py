@@ -43,23 +43,18 @@ class ImportResult:
     errores: list[tuple[int, str]] = field(default_factory=list)
 
 
-def _existe(
-    session: Session,
-    codigo_barras: str | None,
-    sku: str | None,
-    excluir_id: int | None = None,
-) -> bool:
+def _buscar_por_clave(
+    session: Session, codigo_barras: str | None, sku: str | None
+) -> Producto | None:
+    """Producto (activo o eliminado) que ya use ese código de barras o SKU."""
     cond = []
     if codigo_barras:
         cond.append(Producto.codigo_barras == codigo_barras)
     if sku:
         cond.append(Producto.sku == sku)
     if not cond:
-        return False
-    q = select(Producto.id).where(or_(*cond))
-    if excluir_id is not None:
-        q = q.where(Producto.id != excluir_id)
-    return session.scalar(q) is not None
+        return None
+    return session.scalar(select(Producto).where(or_(*cond)))
 
 
 def crear_producto(
@@ -74,8 +69,26 @@ def crear_producto(
     controla_stock: bool = True,
     cajero_id: int | None = None,
 ) -> Producto:
-    if _existe(session, codigo_barras, sku):
-        raise CodigoDuplicado(codigo_barras or sku)
+    existente = _buscar_por_clave(session, codigo_barras, sku)
+    if existente is not None:
+        if existente.activo:
+            raise CodigoDuplicado(codigo_barras or sku)  # AT-6.1: duplicado real
+        # Re-alta de un producto eliminado (lógico): se REUTILIZA el registro
+        # para conservar su historial (ventas y movimientos lo referencian por
+        # FK). Antes esto fallaba como "ya existe" aunque estuviera oculto.
+        existente.activo = True
+        existente.nombre = nombre
+        existente.precio = Decimal(precio)
+        existente.iva_tasa = Decimal(iva_tasa)
+        existente.controla_stock = controla_stock
+        if codigo_barras:
+            existente.codigo_barras = codigo_barras
+        if sku:
+            existente.sku = sku
+        session.flush()
+        # Deja la existencia en la cantidad indicada al re-darlo de alta.
+        ajustar_stock(session, existente, Decimal(existencia_inicial), cajero_id)
+        return existente
     p = Producto(
         nombre=nombre,
         precio=Decimal(precio),
@@ -209,6 +222,7 @@ def importar_csv(
                 )
                 res.creados += 1
             else:
+                existente.activo = True  # re-importar reactiva un eliminado
                 existente.nombre = nombre
                 existente.precio = precio
                 existente.iva_tasa = iva
