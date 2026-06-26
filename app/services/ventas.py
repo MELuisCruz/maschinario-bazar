@@ -7,10 +7,11 @@ stock ni caja (AT-2.7).
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 from decimal import Decimal
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Producto, Venta, VentaLinea
@@ -61,30 +62,35 @@ def _buscar_producto(session: Session, codigo: str) -> Producto | None:
     )
 
 
+def _normalizar(texto: str) -> str:
+    """Minúsculas y SIN acentos, para una búsqueda no estricta (insensible a
+    mayúsculas/acentos). 'Balancín' y 'balancin' coinciden igual."""
+    desc = unicodedata.normalize("NFKD", texto or "")
+    sin_acentos = "".join(c for c in desc if not unicodedata.combining(c))
+    return sin_acentos.casefold()
+
+
 def buscar_productos(session: Session, q: str, limit: int = 8) -> list[Producto]:
     """Coincidencias por nombre, SKU o código de barras (para el desplegable de
-    venta). Búsqueda parcial, insensible a mayúsculas; solo productos activos."""
+    venta). Coincidencia parcial, insensible a mayúsculas y acentos; solo activos.
+
+    Se filtra en Python sobre el catálogo activo (suele ser pequeño) para lograr
+    la insensibilidad a acentos de forma portable, sin depender de extensiones de
+    PostgreSQL (unaccent) que podrían no estar instaladas."""
     q = (q or "").strip()
     if len(q) < 2:
         return []
-    # Escapa comodines LIKE para que el texto del usuario sea literal.
-    seguro = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    patron = f"%{seguro}%"
-    return list(
-        session.scalars(
-            select(Producto)
-            .where(
-                Producto.activo.is_(True),
-                or_(
-                    Producto.nombre.ilike(patron, escape="\\"),
-                    Producto.sku.ilike(patron, escape="\\"),
-                    Producto.codigo_barras.ilike(patron, escape="\\"),
-                ),
-            )
-            .order_by(Producto.nombre)
-            .limit(limit)
-        )
-    )
+    nq = _normalizar(q)
+    activos = session.scalars(
+        select(Producto).where(Producto.activo.is_(True)).order_by(Producto.nombre)
+    ).all()
+    res: list[Producto] = []
+    for p in activos:
+        if any(nq in _normalizar(c) for c in (p.nombre, p.sku, p.codigo_barras) if c):
+            res.append(p)
+            if len(res) >= limit:
+                break
+    return res
 
 
 def agregar_por_codigo(session: Session, venta: Venta, codigo: str) -> AltaResultado:

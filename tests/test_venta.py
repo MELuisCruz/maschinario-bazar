@@ -141,6 +141,13 @@ def test_buscar_productos_por_nombre_sku_minimo_y_solo_activos(db, make_producto
     assert ventas.buscar_productos(db, "k") == []
 
 
+def test_buscar_productos_insensible_a_acentos(db, make_producto):
+    make_producto(codigo="AC1", nombre="Balancín de Tetris", sku="TB-00")
+    # Buscar sin acento encuentra el producto con acento (y viceversa).
+    assert ventas.buscar_productos(db, "balancin")[0].nombre == "Balancín de Tetris"
+    assert ventas.buscar_productos(db, "BALANCÍN")[0].nombre == "Balancín de Tetris"
+
+
 def test_agregar_por_id_agrega_linea(db, turno, make_producto):
     p = make_producto(codigo="ID1", nombre="Oloide", precio="119.00")
     v = _venta(db, turno)
