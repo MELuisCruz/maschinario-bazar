@@ -30,8 +30,15 @@
   // Recuperar foco tras swaps HTMX que reemplazan la tabla / cierran modal (§8.2).
   // En la pantalla de venta (existe #venta-main), además limpia el código ya
   // procesado para preparar la siguiente lectura del escáner.
-  document.body.addEventListener("htmx:afterSwap", function () {
-    if (document.getElementById("venta-main")) clearScan();
+  document.body.addEventListener("htmx:afterSwap", function (evt) {
+    // Solo al refrescar la zona de venta (alta/edición). NO en cada tecla de la
+    // búsqueda por nombre (esa swapea #sugerencias y debe conservar el texto).
+    var target = evt.detail && evt.detail.target;
+    if (target && target.id === "venta-main") {
+      clearScan();
+      var sug = document.getElementById("sugerencias");
+      if (sug) sug.innerHTML = "";
+    }
     focusScan();
   });
 
@@ -41,9 +48,15 @@
   document.body.addEventListener("htmx:afterRequest", function (evt) {
     var d = evt.detail || {};
     if (d.failed) return;
-    var elt = d.elt;
-    var form = elt && elt.closest ? elt.closest("form[data-reset-on-success]") : null;
-    if (form && typeof form.reset === "function") form.reset();
+    // La búsqueda en vivo es GET y sale del input dentro del form de scan:
+    // NO resetear ahí (borraría lo tecleado). Solo tras envíos (POST).
+    var verb = d.requestConfig && d.requestConfig.verb;
+    if (verb !== "get") {
+      var elt = d.elt;
+      var form =
+        elt && elt.closest ? elt.closest("form[data-reset-on-success]") : null;
+      if (form && typeof form.reset === "function") form.reset();
+    }
     focusScan();
   });
 

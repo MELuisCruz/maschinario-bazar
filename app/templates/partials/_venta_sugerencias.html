@@ -1,0 +1,22 @@
+{# Desplegable de coincidencias de la barra de venta (búsqueda por nombre).
+   Cada opción agrega el producto por id; CSP-safe (hx-vals JSON, sin eval). #}
+{% if q and q|length >= 2 %}
+  {% if productos %}
+  <ul class="sugerencias-lista" role="listbox">
+    {% for p in productos %}
+    <li>
+      <button type="button" class="sugerencia"
+              hx-post="/venta/agregar" hx-vals='{"producto_id": {{ p.id }}}'
+              hx-target="#venta-main" hx-swap="outerHTML">
+        <span class="sug-nombre">{{ p.nombre }}</span>
+        <span class="sug-meta mono">{{ p.sku or p.codigo_barras or '—' }}
+          · ${{ '%.2f'|format(p.precio) }}{% if p.controla_stock %} ·
+          {% if p.existencia > 0 %}{{ '%g'|format(p.existencia) }} disp{% else %}agotado{% endif %}{% endif %}</span>
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="sugerencias-vacio muted">Sin coincidencias para «{{ q }}».</div>
+  {% endif %}
+{% endif %}

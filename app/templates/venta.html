@@ -2,11 +2,14 @@
 {% block title %}Venta — {{ business_name }}{% endblock %}
 {% block content %}
 <form hx-post="/venta/scan" hx-target="#venta-main" hx-swap="outerHTML"
-      data-reset-on-success="true"
-      style="margin-bottom:.6rem;">
-  <label for="scan-input">Escanea o teclea el código</label>
+      data-reset-on-success="true" autocomplete="off"
+      style="margin-bottom:.6rem;position:relative;">
+  <label for="scan-input">Escanea, teclea el código o busca por nombre</label>
   <input id="scan-input" name="codigo" autocomplete="off"
-         placeholder="Código de barras / SKU" />
+         placeholder="Código de barras / SKU / nombre"
+         hx-get="/venta/buscar" hx-trigger="keyup changed delay:250ms"
+         hx-target="#sugerencias" hx-swap="innerHTML" />
+  <div id="sugerencias" class="sugerencias"></div>
 </form>
 
 <details style="margin-bottom:.8rem;">

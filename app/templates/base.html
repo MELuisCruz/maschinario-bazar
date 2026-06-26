@@ -6,9 +6,9 @@
   <title>{% block title %}{{ business_name }} — POS{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}?v=2" />
   <script src="{{ url_for('static', path='js/htmx.min.js') }}" defer></script>
-  <script src="{{ url_for('static', path='js/app.js') }}?v=2" defer></script>
+  <script src="{{ url_for('static', path='js/app.js') }}?v=3" defer></script>
   {% block head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">

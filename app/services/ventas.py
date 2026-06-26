@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models import Producto, Venta, VentaLinea
@@ -61,12 +61,56 @@ def _buscar_producto(session: Session, codigo: str) -> Producto | None:
     )
 
 
+def buscar_productos(session: Session, q: str, limit: int = 8) -> list[Producto]:
+    """Coincidencias por nombre, SKU o código de barras (para el desplegable de
+    venta). Búsqueda parcial, insensible a mayúsculas; solo productos activos."""
+    q = (q or "").strip()
+    if len(q) < 2:
+        return []
+    # Escapa comodines LIKE para que el texto del usuario sea literal.
+    seguro = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    patron = f"%{seguro}%"
+    return list(
+        session.scalars(
+            select(Producto)
+            .where(
+                Producto.activo.is_(True),
+                or_(
+                    Producto.nombre.ilike(patron, escape="\\"),
+                    Producto.sku.ilike(patron, escape="\\"),
+                    Producto.codigo_barras.ilike(patron, escape="\\"),
+                ),
+            )
+            .order_by(Producto.nombre)
+            .limit(limit)
+        )
+    )
+
+
 def agregar_por_codigo(session: Session, venta: Venta, codigo: str) -> AltaResultado:
     """Agrega producto por código; incrementa cantidad si ya existe (AT-2.3)."""
     producto = _buscar_producto(session, codigo)
     if producto is None:
         raise ProductoNoEncontrado(codigo)
+    return _agregar_producto(session, venta, producto)
 
+
+def agregar_por_id(session: Session, venta: Venta, producto_id: int) -> AltaResultado:
+    """Agrega un producto elegido del desplegable de coincidencias (por nombre)."""
+    producto = session.scalar(
+        select(Producto).where(
+            Producto.id == producto_id, Producto.activo.is_(True)
+        )
+    )
+    if producto is None:
+        raise ProductoNoEncontrado(str(producto_id))
+    return _agregar_producto(session, venta, producto)
+
+
+def _agregar_producto(
+    session: Session, venta: Venta, producto: Producto
+) -> AltaResultado:
+    """Núcleo de alta: suma 1 unidad (o incrementa) respetando el stock."""
     linea = next((ln for ln in venta.lineas if ln.producto_id == producto.id), None)
     actual = Decimal(linea.cantidad) if linea is not None else Decimal("0")
 

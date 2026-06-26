@@ -71,6 +71,41 @@ def scan(
     return _main(request, venta, aviso)
 
 
+@router.get("/buscar", response_class=HTMLResponse)
+def buscar(
+    request: Request,
+    codigo: str = "",
+    session: Session = Depends(get_session),
+    ctx: tuple[Cajero, Turno] = Depends(require_turno),
+):
+    """Desplegable de coincidencias por nombre/SKU/código (pre-query, sin agregar)."""
+    productos = ventas.buscar_productos(session, codigo)
+    return templates.TemplateResponse(
+        request,
+        "partials/_venta_sugerencias.html",
+        {"productos": productos, "q": (codigo or "").strip()},
+    )
+
+
+@router.post("/agregar", response_class=HTMLResponse)
+def agregar(
+    request: Request,
+    producto_id: int = Form(...),
+    session: Session = Depends(get_session),
+    ctx: tuple[Cajero, Turno] = Depends(require_turno),
+):
+    """Agrega el producto elegido del desplegable de coincidencias."""
+    _, turno = ctx
+    venta = _venta_activa(session, turno)
+    try:
+        res = ventas.agregar_por_id(session, venta, producto_id)
+        aviso = res.aviso
+    except ventas.ProductoNoEncontrado:
+        aviso = "El producto ya no está disponible."
+    session.commit()
+    return _main(request, venta, aviso)
+
+
 @router.post("/especial", response_class=HTMLResponse)
 def especial(
     request: Request,

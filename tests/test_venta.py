@@ -117,3 +117,51 @@ def test_http_scan_y_cancelar(op_client, make_producto):
     # Código inexistente → aviso, no rompe.
     r2 = op_client.post("/venta/scan", data={"codigo": "NADA"})
     assert "no encontrado" in r2.text.lower()
+
+
+# --- Búsqueda por nombre en la barra de venta (desplegable de coincidencias) ---
+
+
+def test_buscar_productos_por_nombre_sku_minimo_y_solo_activos(db, make_producto):
+    make_producto(codigo="C1", nombre="Botella de Klein", sku="KB-00")
+    make_producto(codigo="C2", nombre="Banda de Moebius", sku="MT-00")
+    inactivo = make_producto(codigo="C3", nombre="Klein inactivo", sku="ZZ-00")
+    inactivo.activo = False
+    db.commit()
+
+    # Parcial por nombre, insensible a mayúsculas; el inactivo no aparece.
+    res = ventas.buscar_productos(db, "klein")
+    assert [p.nombre for p in res] == ["Botella de Klein"]
+    # Por SKU.
+    assert ventas.buscar_productos(db, "MT-00")[0].nombre == "Banda de Moebius"
+    # Varias coincidencias ordenadas por nombre.
+    nombres = [p.nombre for p in ventas.buscar_productos(db, "de")]
+    assert nombres == ["Banda de Moebius", "Botella de Klein"]
+    # Menos de 2 caracteres → sin resultados (evita ruido al teclear/escanear).
+    assert ventas.buscar_productos(db, "k") == []
+
+
+def test_agregar_por_id_agrega_linea(db, turno, make_producto):
+    p = make_producto(codigo="ID1", nombre="Oloide", precio="119.00")
+    v = _venta(db, turno)
+    res = ventas.agregar_por_id(db, v, p.id)
+    db.commit()
+    assert res.linea.descripcion == "Oloide" and len(v.lineas) == 1
+    with pytest.raises(ventas.ProductoNoEncontrado):
+        ventas.agregar_por_id(db, v, 999999)
+    db.rollback()
+
+
+def test_http_buscar_y_agregar(op_client, make_producto):
+    make_producto(codigo="BN1", nombre="Tardigrado", precio="45.00", sku="TARD-0")
+    # GET búsqueda → desplegable con la coincidencia (no agrega aún).
+    r = op_client.get("/venta/buscar", params={"codigo": "tardi"})
+    assert r.status_code == 200
+    assert "Tardigrado" in r.text and "/venta/agregar" in r.text
+    # Sin coincidencias.
+    r0 = op_client.get("/venta/buscar", params={"codigo": "noexiste"})
+    assert "Sin coincidencias" in r0.text
+    # POST agregar por id → agrega la línea elegida del desplegable.
+    prod = make_producto(codigo="BN2", nombre="Cubo Infinito", precio="69.00")
+    r2 = op_client.post("/venta/agregar", data={"producto_id": prod.id})
+    assert r2.status_code == 200 and "Cubo Infinito" in r2.text
