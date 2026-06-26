@@ -113,6 +113,42 @@ def crear_producto(
     return p
 
 
+def editar_producto(
+    session: Session,
+    producto: Producto,
+    *,
+    nombre: str,
+    precio: Decimal,
+    iva_tasa: Decimal = Decimal("0.160"),
+    controla_stock: bool = True,
+    codigo_barras: str | None = None,
+    sku: str | None = None,
+) -> Producto:
+    """Edita los datos de un producto (NO su existencia; eso es de Inventario).
+
+    Permite cambiar SKU/código de barras, validando que el nuevo valor no esté
+    en uso por OTRO producto (la unicidad cubre activos e inactivos)."""
+    codigo_barras = codigo_barras or None
+    sku = sku or None
+    for col, valor in (("codigo_barras", codigo_barras), ("sku", sku)):
+        if valor is not None:
+            otro = session.scalar(
+                select(Producto.id).where(
+                    getattr(Producto, col) == valor, Producto.id != producto.id
+                )
+            )
+            if otro is not None:
+                raise CodigoDuplicado(valor)
+    producto.nombre = nombre
+    producto.precio = Decimal(precio)
+    producto.iva_tasa = Decimal(iva_tasa)
+    producto.controla_stock = controla_stock
+    producto.codigo_barras = codigo_barras
+    producto.sku = sku
+    session.flush()
+    return producto
+
+
 def ajustar_stock(
     session: Session,
     producto: Producto,

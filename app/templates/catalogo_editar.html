@@ -1,0 +1,39 @@
+{% extends "shell.html" %}
+{% block title %}Editar producto — {{ business_name }}{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;gap:1rem;margin-bottom:.6rem;">
+  <h2 style="margin:0;">Editar producto</h2>
+  <span style="flex:1;"></span>
+  <a class="btn" href="/catalogo">← Volver al catálogo</a>
+</div>
+{% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+
+<form method="post" action="/catalogo/{{ producto.id }}/editar" class="panel" style="max-width:480px;">
+  <label>Nombre</label>
+  <input name="nombre" value="{{ producto.nombre }}" required />
+
+  <label>SKU interno <span class="muted">(escaneable; vacío si no usa)</span></label>
+  <input name="sku" class="mono" autocomplete="off" value="{{ producto.sku or '' }}" />
+
+  <label>Código de barras <span class="muted">(opcional)</span></label>
+  <input name="codigo_barras" class="mono" autocomplete="off" value="{{ producto.codigo_barras or '' }}" />
+
+  <label>Precio (con IVA)</label>
+  <input name="precio" class="mono" inputmode="decimal" value="{{ '%.2f'|format(producto.precio) }}" required />
+
+  <label>Tasa de IVA</label>
+  <input name="iva_tasa" class="mono" inputmode="decimal" value="{{ '%g'|format(producto.iva_tasa) }}" />
+
+  <label style="margin-top:.4rem;">
+    <input type="checkbox" name="controla_stock" value="true" style="width:auto;"
+           {{ 'checked' if producto.controla_stock }}> Controla stock
+  </label>
+
+  <div style="display:flex;gap:.5rem;margin-top:.8rem;">
+    <button class="btn btn-primary" type="submit">Guardar cambios</button>
+    <a class="btn" href="/catalogo">Cancelar</a>
+  </div>
+  <p class="muted" style="margin-top:.4rem;">La existencia se cambia en
+    <a href="/inventario">Inventario</a>, no aquí.</p>
+</form>
+{% endblock %}

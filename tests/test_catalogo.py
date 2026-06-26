@@ -208,6 +208,63 @@ def test_alta_duplicado_activo_sigue_rechazando(db, make_producto):
     db.rollback()
 
 
+def test_editar_producto_cambia_campos_incluido_codigo(db, make_producto):
+    p = make_producto(codigo="ED-OLD", sku="SK-OLD", nombre="Viejo", precio="10.00")
+    cat.editar_producto(
+        db,
+        p,
+        nombre="Nuevo",
+        precio=D("25.50"),
+        iva_tasa=D("0.160"),
+        controla_stock=False,
+        codigo_barras="ED-NEW",
+        sku="SK-NEW",
+    )
+    db.commit()
+    assert p.nombre == "Nuevo" and p.precio == D("25.50")
+    assert p.codigo_barras == "ED-NEW" and p.sku == "SK-NEW"
+    assert p.controla_stock is False
+
+
+def test_editar_codigo_que_choca_con_otro_rechaza(db, make_producto):
+    make_producto(codigo="OCUPADO", nombre="Uno")
+    p2 = make_producto(codigo="LIBRE", nombre="Dos")
+    with pytest.raises(cat.CodigoDuplicado):
+        cat.editar_producto(
+            db, p2, nombre="Dos", precio=D("1.00"), codigo_barras="OCUPADO"
+        )
+    db.rollback()
+
+
+def test_http_editar_admin(op_client, db, make_producto):
+    p = make_producto(codigo="HED", sku="HED-SK", nombre="Original", precio="10.00")
+    # El formulario carga.
+    r = op_client.get(f"/catalogo/{p.id}/editar")
+    assert r.status_code == 200 and "Original" in r.text
+    # Guardar cambios (cambia nombre, precio y SKU).
+    r2 = op_client.post(
+        f"/catalogo/{p.id}/editar",
+        data={"nombre": "Cambiado", "precio": "99.00", "sku": "HED-NEW",
+              "codigo_barras": "HED", "iva_tasa": "0.160", "controla_stock": "true"},
+    )
+    assert r2.status_code == 200 and "actualizado" in r2.text
+    db.expire_all()
+    prod = db.get(Producto, p.id)
+    assert prod.nombre == "Cambiado" and prod.precio == D("99.00")
+    assert prod.sku == "HED-NEW"
+
+
+def test_http_editar_no_admin_bloqueado(basic_client, make_producto):
+    p = make_producto(codigo="NED")
+    assert basic_client.get(f"/catalogo/{p.id}/editar").status_code == 403
+    assert (
+        basic_client.post(
+            f"/catalogo/{p.id}/editar", data={"nombre": "x", "precio": "1"}
+        ).status_code
+        == 403
+    )
+
+
 def test_http_eliminar_y_reinsertar(op_client, db, make_producto):
     p = make_producto(codigo="HRE", nombre="Vela", existencia="2")
     op_client.post(f"/catalogo/{p.id}/eliminar")

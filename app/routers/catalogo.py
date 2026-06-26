@@ -193,3 +193,77 @@ def eliminar(
     return _render_catalogo(
         request, session, cajero, msg=f"«{nombre}» eliminado del catálogo."
     )
+
+
+def _render_editar(request, cajero, producto, *, error=None, status=200):
+    return templates.TemplateResponse(
+        request,
+        "catalogo_editar.html",
+        {
+            "cajero": cajero,
+            "producto": producto,
+            "active_nav": "catalogo",
+            "error": error,
+        },
+        status_code=status,
+    )
+
+
+@router.get("/{producto_id}/editar", response_class=HTMLResponse)
+def editar_form(
+    request: Request,
+    producto_id: int,
+    session: Session = Depends(get_session),
+    cajero: Cajero = Depends(require_admin),
+):
+    producto = session.get(Producto, producto_id)
+    if producto is None or not producto.activo:
+        return _render_catalogo(
+            request, session, cajero, error="Producto no encontrado.", status=404
+        )
+    return _render_editar(request, cajero, producto)
+
+
+@router.post("/{producto_id}/editar", response_class=HTMLResponse)
+def editar(
+    request: Request,
+    producto_id: int,
+    nombre: str = Form(...),
+    precio: str = Form(...),
+    codigo_barras: str = Form(""),
+    sku: str = Form(""),
+    iva_tasa: str = Form("0.160"),
+    controla_stock: str = Form("false"),  # checkbox: ausente = desmarcado
+    session: Session = Depends(get_session),
+    cajero: Cajero = Depends(require_admin),
+):
+    producto = session.get(Producto, producto_id)
+    if producto is None or not producto.activo:
+        return _render_catalogo(
+            request, session, cajero, error="Producto no encontrado.", status=404
+        )
+    try:
+        cat.editar_producto(
+            session,
+            producto,
+            nombre=nombre.strip(),
+            precio=_dec(precio),
+            iva_tasa=_dec(iva_tasa, "0.160"),
+            controla_stock=controla_stock.lower() not in ("false", "0", "no"),
+            codigo_barras=codigo_barras.strip() or None,
+            sku=sku.strip() or None,
+        )
+        session.commit()
+    except cat.CodigoDuplicado:
+        session.rollback()
+        session.refresh(producto)
+        return _render_editar(
+            request,
+            cajero,
+            producto,
+            error="Ya existe otro producto con ese código de barras o SKU.",
+            status=400,
+        )
+    return _render_catalogo(
+        request, session, cajero, msg=f"«{producto.nombre}» actualizado."
+    )
