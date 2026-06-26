@@ -53,6 +53,30 @@ def test_no_desactivar_ultimo_admin(db, cajero):
     db.rollback()
 
 
+def test_admin_puede_autodegradarse_si_existe_otro_admin(db, cajero, cajero_basico):
+    # Requisito 2 (límite): con OTRO admin presente, un admin SÍ puede bajarse
+    # el nivel; lo que se prohíbe es dejar al sistema sin administradores.
+    cajeros_svc.cambiar_rol(db, cajero_basico, "administrador")  # ahora hay 2 admins
+    db.commit()
+    cajeros_svc.cambiar_rol(db, cajero, "cajero")  # auto-degradación permitida
+    db.commit()
+    assert not cajeros_svc.es_admin(cajero)
+    assert cajeros_svc.es_admin(cajero_basico)  # sigue existiendo ≥1 admin
+
+
+def test_http_self_demote_ultimo_admin_bloqueado(op_client, cajero):
+    # El único admin no puede quitarse el rol a sí mismo (mensaje self-aware).
+    r = op_client.post(f"/usuarios/{cajero.id}/rol", data={"rol": "cajero"})
+    assert r.status_code == 400
+    assert "tu propio rol" in r.text and "único" in r.text
+
+
+def test_http_self_deactivate_ultimo_admin_bloqueado(op_client, cajero):
+    r = op_client.post(f"/usuarios/{cajero.id}/activo", data={"activo": "false"})
+    assert r.status_code == 400
+    assert "desactivarte" in r.text
+
+
 # --- HTTP: guardas de rol ---
 
 

@@ -11,7 +11,7 @@
     <tbody>
     {% for u in usuarios %}
       <tr>
-        <td class="mono">{{ u.usuario }}</td>
+        <td class="mono">{{ u.usuario }}{% if u.id == cajero.id %} <span class="tag tag-ok">tú</span>{% endif %}</td>
         <td>{{ u.nombre }}</td>
         <td>{{ u.rol.value if u.rol.value is defined else u.rol }}</td>
         <td>{{ 'sí' if u.activo else 'no' }}</td>

@@ -101,11 +101,16 @@ def cambiar_rol(
         )
     except cajeros_svc.UltimoAdmin:
         session.rollback()
+        propio = objetivo.id == admin.id
         return _render(
             request,
             session,
             admin,
-            error="No puedes degradar al único administrador activo.",
+            error=(
+                "No puedes quitarte tu propio rol: eres el único administrador."
+                if propio
+                else "No puedes degradar al único administrador activo."
+            ),
             status=400,
         )
     except ValueError:
@@ -138,10 +143,15 @@ def set_activo(
         )
     except cajeros_svc.UltimoAdmin:
         session.rollback()
+        propio = objetivo.id == admin.id
         return _render(
             request,
             session,
             admin,
-            error="No puedes desactivar al único administrador activo.",
+            error=(
+                "No puedes desactivarte: eres el único administrador."
+                if propio
+                else "No puedes desactivar al único administrador activo."
+            ),
             status=400,
         )
