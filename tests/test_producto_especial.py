@@ -90,3 +90,17 @@ def test_http_cajero_puede_agregar_especial(basic_client):
     assert r.status_code == 200
     assert "Producto especial: Granel" in r.text
     assert "nota interna" in r.text  # las notas se ven en pantalla (no en ticket)
+
+
+def test_especial_divisa_es_display_only_en_la_ui(basic_client):
+    # Bug: el selector de divisa del especial posteaba a /precio-especial y
+    # recalculaba el precio. Ahora la divisa va al endpoint display-only /divisa,
+    # separado del monto (que sigue editando vía /precio-especial).
+    r = basic_client.post(
+        "/venta/especial", data={"referencia": "Granel", "precio": "100"}
+    )
+    assert r.status_code == 200
+    # Venta con una sola línea (especial): el form de divisa apunta a /divisa…
+    assert "/divisa" in r.text
+    # …y el monto sigue editándose por /precio-especial.
+    assert "/precio-especial" in r.text

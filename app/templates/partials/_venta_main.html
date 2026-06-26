@@ -26,19 +26,25 @@
           <td class="num">
             {% set dv = l.divisa or 'MXN' %}
             {% if l.es_especial %}
-            {# Producto especial: precio EDITABLE (valor + divisa) #}
-            <form hx-post="/venta/linea/{{ l.id }}/precio-especial" hx-target="#venta-main" hx-swap="outerHTML"
-                  style="display:flex;gap:.2rem;justify-content:flex-end;">
-              <select name="divisa" onchange="this.form.requestSubmit()" style="width:3.6rem;padding:.1rem;">
-                <option value="MXN" {{ 'selected' if dv=='MXN' }}>MXN</option>
-                <option value="USD" {{ 'selected' if dv=='USD' }}>USD</option>
-                <option value="EUR" {{ 'selected' if dv=='EUR' }}>EUR</option>
-              </select>
-              <input class="mono" name="monto"
-                     value="{{ '%.2f'|format(l.precio_divisa if (dv!='MXN' and l.precio_divisa is not none) else l.precio_unit) }}"
-                     inputmode="decimal" style="width:4.5rem;text-align:right;"
-                     onchange="this.form.requestSubmit()" />
-            </form>
+            {# Producto especial: el MONTO edita el precio (en la divisa actual);
+               la DIVISA solo cambia la visualización, IGUAL que catálogo (no
+               recalcula el precio_unit). Son dos formularios separados. #}
+            <div style="display:flex;gap:.2rem;justify-content:flex-end;align-items:center;">
+              <form hx-post="/venta/linea/{{ l.id }}/precio-especial" hx-target="#venta-main" hx-swap="outerHTML" style="display:inline;">
+                <input type="hidden" name="divisa" value="{{ dv }}" />
+                <input class="mono" name="monto"
+                       value="{{ '%.2f'|format(l.precio_divisa if (dv!='MXN' and l.precio_divisa is not none) else l.precio_unit) }}"
+                       inputmode="decimal" style="width:4.5rem;text-align:right;"
+                       onchange="this.form.requestSubmit()" title="Editar precio (en la divisa seleccionada)" />
+              </form>
+              <form hx-post="/venta/linea/{{ l.id }}/divisa" hx-target="#venta-main" hx-swap="outerHTML" style="display:inline;">
+                <select name="divisa" onchange="this.form.requestSubmit()" style="width:3.6rem;padding:.1rem;">
+                  <option value="MXN" {{ 'selected' if dv=='MXN' }}>MXN</option>
+                  <option value="USD" {{ 'selected' if dv=='USD' }}>USD</option>
+                  <option value="EUR" {{ 'selected' if dv=='EUR' }}>EUR</option>
+                </select>
+              </form>
+            </div>
             {% else %}
             {# Catálogo: el precio NO se edita; el selector solo cambia la divisa de visualización #}
             <form hx-post="/venta/linea/{{ l.id }}/divisa" hx-target="#venta-main" hx-swap="outerHTML"

@@ -70,6 +70,21 @@ def test_set_divisa_solo_visualiza_no_cambia_precio(db, turno, make_producto):
     assert ln.divisa == "MXN" and ln.precio_divisa is None and ln.tipo_cambio is None
 
 
+def test_divisa_en_especial_es_solo_display_no_recalcula_precio(db, turno):
+    # Bug: cambiar SOLO la divisa de un producto especial recalculaba el precio.
+    # Ahora es display-only (como catálogo): precio_unit (MXN) intacto.
+    divisas.set_rates(db, D("20"), D("25"))
+    db.commit()
+    v = ventas.get_or_create_venta(db, turno.id, turno.cajero_id)
+    ln = ventas.agregar_especial(db, v, "Granel", "", D("100"), "MXN")
+    db.commit()
+    ventas.set_divisa(db, ln, "USD")
+    db.commit()
+    assert ln.precio_unit == D("100.00")  # NO cambió
+    assert ln.divisa == "USD" and ln.precio_divisa == D("5.00")  # solo display
+    assert ln.importe == D("100.00")  # importe siempre MXN
+
+
 def test_set_precio_especial_rechaza_catalogo(db, turno, make_producto):
     divisas.set_rates(db, D("20"), D("25"))
     db.commit()
